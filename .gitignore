@@ -1,20 +1,13 @@
-# Environments
-.env
-.env.local
-backend/.env
-frontend/.env.local
-
-# Dependencies
-node_modules/
-frontend/node_modules/
-
-# Python & Database
+# Python bytecode (compiled files)
 __pycache__/
 *.pyc
-backend/db.sqlite3
 
-# Media & Build folders
-backend/media/
+# Next.js build output
 .next/
-dist/
-build/
+
+# Dependencies (Node.js)
+node_modules/
+
+# Environment variables (Security ke liye)
+.env
+.env.local
