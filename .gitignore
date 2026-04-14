@@ -1,0 +1,13 @@
+# Python bytecode (compiled files)
+__pycache__/
+*.pyc
+
+# Next.js build output
+.next/
+
+# Dependencies (Node.js)
+node_modules/
+
+# Environment variables (Security ke liye)
+.env
+.env.local

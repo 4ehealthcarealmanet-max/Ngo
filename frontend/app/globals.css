@@ -1,0 +1,43 @@
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply m-0 p-0 w-full overflow-x-hidden;
+    /* Smooth scrolling makes the "Find Doctors" link feel premium */
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Professional Typography */
+  h1, h2, h3 {
+    @apply tracking-tight text-slate-900;
+  }
+}
+
+@layer components {
+  /* Creating a reusable button component so you don't repeat 10 classes */
+  .btn-primary {
+    @apply rounded-xl bg-brand-blue px-8 py-4 text-lg font-bold text-white 
+           transition-all hover:bg-blue-700 hover:shadow-lg active:scale-95;
+  }
+
+  /* Glass effect for the Navbar */
+  .glass-header {
+    @apply sticky top-0 z-50 w-full border-b border-slate-100 bg-white/80 backdrop-blur-md;
+  }
+}
+
+@keyframes slow-floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); } /* Thoda upar jayega */
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: slow-floating 3s ease-in-out infinite;
+}
