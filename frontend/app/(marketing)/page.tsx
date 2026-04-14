@@ -48,7 +48,7 @@ interface ReferralNetwork {
   created_at: string;
 }
 
-export default function LandingPage() {
+function LandingPageContent() {
   const router = useRouter(); 
   const searchParams = useSearchParams();
   const [ngos, setNgos] = useState<NGO[]>([]);
@@ -632,5 +632,20 @@ export default function LandingPage() {
       </section>
       <Footer />
     </div>
+  );
+}
+
+
+import { Suspense } from "react";
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-blue"></div>
+      </div>
+    }>
+      <LandingPageContent />
+    </Suspense>
   );
 }
