@@ -28,10 +28,10 @@ class PatientProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Workshop)
 class WorkshopAdmin(admin.ModelAdmin):
-    list_display = ("title", "ngo", "expert_name", "date", "is_open", "latitude", "longitude")
+    list_display = ("title", "ngo", "expert_name", "date", "is_open", "image_url", "latitude", "longitude")
     list_filter = ("is_open", "date", "ngo")
     search_fields = ("title", "expert_name")
-    list_editable = ("is_open", "latitude", "longitude")
+    list_editable = ("is_open", "image_url", "latitude", "longitude")
 
 
 @admin.register(ReferralNetwork)
