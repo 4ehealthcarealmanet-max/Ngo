@@ -260,3 +260,40 @@ class Donation(models.Model):
 
     def __str__(self):
         return f"{self.donor.name} - {self.amount}"
+
+
+class BloodStock(models.Model):
+    BLOOD_GROUPS = [
+        ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'),
+        ('O+', 'O+'), ('O-', 'O-'), ('AB+', 'AB+'), ('AB-', 'AB-'),
+    ]
+    blood_group = models.CharField(max_length=5, choices=BLOOD_GROUPS, unique=True)
+    units_available = models.PositiveIntegerField(default=0)
+    total_donated = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.blood_group} ({self.units_available} Units)"
+
+class BloodRequest(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Dispatched', 'Dispatched'),
+        ('Delivered', 'Delivered'),
+    ]
+    patient_name = models.CharField(max_length=150)
+    hospital_name = models.CharField(max_length=200)
+    blood_group = models.CharField(max_length=5)
+    units_required = models.PositiveIntegerField()
+    urgency_level = models.CharField(max_length=20, default='Normal') # Urgent, Normal
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    
+    # Tracking Fields
+    current_lat = models.FloatField(null=True, blank=True)
+    current_lng = models.FloatField(null=True, blank=True)
+    rider_contact = models.CharField(max_length=15, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.patient_name} - {self.blood_group}"

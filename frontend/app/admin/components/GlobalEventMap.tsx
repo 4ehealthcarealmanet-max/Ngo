@@ -25,17 +25,15 @@ type WorkshopRegistration = {
 };
 
 type GlobalEventMapProps = {
-  isLoading: boolean;
-  workshops: Workshop[];
-  ngos: NGO[];
-  registrations: WorkshopRegistration[];
+  isLoading?: boolean;
+  workshops?: Workshop[];
+  ngos?: NGO[];
+  registrations?: WorkshopRegistration[];
 };
 
 const INDORE_CENTER: [number, number] = [22.7196, 75.8577];
-
 const CARTO_POSITRON_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const CARTO_POSITRON_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const CARTO_POSITRON_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 const toNumber = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -66,44 +64,38 @@ const createSvgMarker = (color: string) => {
 
 const BLUE_MARKER_ICON = createSvgMarker("#2563EB");
 
-function FitToWorkshops({
-  points,
-}: {
-  points: Array<{ lat: number; lng: number }>;
-}) {
-  const map = useMap();
+export default function GlobalEventMap({ 
+  isLoading = false, 
+  workshops = [], 
+  ngos = [], 
+  registrations = [] 
+}: GlobalEventMapProps) {
 
-  useEffect(() => {
-    if (!points.length) return;
-
-    if (points.length === 1) {
-      map.setView([points[0].lat, points[0].lng], 12, { animate: true });
-      return;
-    }
-
-    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13, animate: true });
-  }, [map, points]);
-
-  return null;
-}
-
-export default function GlobalEventMap({ isLoading, workshops, ngos, registrations }: GlobalEventMapProps) {
+  // NGO Mapping with Safety
   const ngoNameById = useMemo(() => {
     const map = new Map<number, string>();
-    for (const ngo of ngos) map.set(ngo.id, ngo.name);
+    const safeNgos = Array.isArray(ngos) ? ngos : [];
+    for (const ngo of safeNgos) {
+      if (ngo?.id) map.set(ngo.id, ngo.name);
+    }
     return map;
   }, [ngos]);
 
+  // Registrations Mapping with Safety
   const registrationsByWorkshopId = useMemo(() => {
     const counts = new Map<number, number>();
-    for (const r of registrations) counts.set(r.workshop, (counts.get(r.workshop) ?? 0) + 1);
+    const safeRegs = Array.isArray(registrations) ? registrations : [];
+    for (const r of safeRegs) {
+      if (r?.workshop) counts.set(r.workshop, (counts.get(r.workshop) ?? 0) + 1);
+    }
     return counts;
   }, [registrations]);
 
+  // Active Workshops Mapping with Safety
   const activeWorkshopsWithCoords = useMemo(() => {
-    return workshops
-      .filter((w) => w.is_open)
+    const safeWorkshops = Array.isArray(workshops) ? workshops : [];
+    return safeWorkshops
+      .filter((w) => w && w.is_open)
       .map((w) => {
         const lat = toNumber(w.latitude);
         const lng = toNumber(w.longitude);
@@ -114,7 +106,7 @@ export default function GlobalEventMap({ isLoading, workshops, ngos, registratio
 
   const emptyStateLabel = isLoading
     ? "Loading workshops..."
-    : workshops.length === 0
+    : (workshops?.length ?? 0) === 0
     ? "No workshops found."
     : "Add latitude/longitude to workshops to show markers.";
 
@@ -144,25 +136,21 @@ export default function GlobalEventMap({ isLoading, workshops, ngos, registratio
           {activeWorkshopsWithCoords.map(({ w, lat, lng }) => {
             const ngoName = ngoNameById.get(w.ngo) ?? `NGO #${w.ngo}`;
             const regCount = registrationsByWorkshopId.get(w.id) ?? 0;
-            const shortTitle = (() => {
-              const raw = (w.title ?? "").trim();
-              if (!raw) return "Workshop";
-              const beforeAmp = raw.split("&")[0]?.trim() ?? raw;
-              return beforeAmp.replace(/\s+Workshop$/i, "").trim() || raw;
-            })();
+            const shortTitle = (w.title ?? "Workshop").split("&")[0]?.replace(/\s+Workshop$/i, "").trim() || "Workshop";
+            
             return (
               <Marker key={w.id} position={[lat, lng]} icon={BLUE_MARKER_ICON}>
                 <Popup>
                   <div className="min-w-[220px]">
                     <p className="text-sm font-black text-slate-900">
-                      {shortTitle} Workshop - Hosted by {ngoName}
+                      {shortTitle} - {ngoName}
                     </p>
                     <div className="mt-3 flex items-center justify-between gap-3">
                       <span className="text-[11px] font-black text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-xl">
-                        {new Date(w.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        {new Date(w.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                       </span>
                       <span className="text-[11px] font-black text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-xl">
-                        {regCount} registration{regCount === 1 ? "" : "s"}
+                        {regCount} registrations
                       </span>
                     </div>
                   </div>
