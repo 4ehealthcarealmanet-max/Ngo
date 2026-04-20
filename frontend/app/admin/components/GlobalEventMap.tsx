@@ -64,6 +64,19 @@ const createSvgMarker = (color: string) => {
 
 const BLUE_MARKER_ICON = createSvgMarker("#2563EB");
 
+const FitToWorkshops = ({ points }: { points: { lat: number; lng: number }[] }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (points.length > 0) {
+      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    }
+  }, [points, map]);
+
+  return null;
+};
+
 export default function GlobalEventMap({ 
   isLoading = false, 
   workshops = [], 
