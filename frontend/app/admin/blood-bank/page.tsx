@@ -1,219 +1,545 @@
 "use client";
-import React, { useState } from 'react';
-import { 
-  Droplet, Search, Plus, Filter, ArrowUpRight, Activity, Users, 
-  Clock, MapPin, Phone, AlertCircle, Heart, Truck, TrendingUp,
-  PackageCheck, Info
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import React, { useMemo, useState } from "react";
+import {
+  AlertCircle,
+  Building2,
+  Droplet,
+  HeartPulse,
+  Search,
+  ShieldCheck,
+  Truck,
+  Users,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 
-export default function AdvancedBloodCommandCenter() {
+type InventoryStatus = "Healthy" | "Low" | "Critical";
+
+type InventoryMetric = {
+  group: string;
+  current: number;
+  minRequired: number;
+  trend: number[];
+};
+
+type Delivery = {
+  id: string;
+  target: string;
+  eta: string;
+  status: "Dispatching" | "On Way" | "Delivered";
+  progress: number;
+};
+
+type DonorLog = {
+  id: string;
+  name: string;
+  bloodGroup: string;
+  lastDonation: string;
+  status: "Verified" | "Pending" | "Flagged";
+};
+
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
+const getInventoryStatus = (current: number, minRequired: number): InventoryStatus => {
+  if (current <= Math.max(1, Math.floor(minRequired * 0.5))) return "Critical";
+  if (current < minRequired) return "Low";
+  return "Healthy";
+};
+
+const tone = {
+  primary: {
+    button: "bg-blue-600 text-white hover:bg-blue-700",
+    ring: "ring-blue-200/60",
+    dot: "bg-blue-600",
+  },
+  success: {
+    pill: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    dot: "bg-emerald-600",
+    bar: "bg-emerald-600",
+    spark: "#16a34a",
+  },
+  warning: {
+    pill: "border-amber-200 bg-amber-50 text-amber-900",
+    dot: "bg-amber-500",
+    bar: "bg-amber-500",
+    spark: "#f59e0b",
+  },
+  danger: {
+    pill: "border-red-200 bg-red-50 text-red-900",
+    dot: "bg-red-600",
+    bar: "bg-red-600",
+    spark: "#dc2626",
+  },
+  neutral: {
+    card: "bg-white border border-slate-200 rounded-lg",
+    subtext: "text-slate-500",
+  },
+} as const;
+
+const HOVER_LIFT_CARD = "hover:shadow-xl hover:-translate-y-2 transition-all duration-300";
+
+function Sparkline({ data, stroke }: { data: number[]; stroke: string }) {
+  const points = useMemo(() => {
+    const safe = Array.isArray(data) && data.length >= 2 ? data : [0, 0];
+    const min = Math.min(...safe);
+    const max = Math.max(...safe);
+    const range = max - min || 1;
+    return safe.map((v, i) => {
+      const x = (i / (safe.length - 1)) * 100;
+      const y = 30 - ((v - min) / range) * 24;
+      return { x, y };
+    });
+  }, [data]);
+
+  const d = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+
+  return (
+    <svg viewBox="0 0 100 32" className="h-6 w-20" aria-hidden>
+      <path d={d} fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function StatusDot({ className = "" }: { className?: string }) {
+  return <span className={`inline-block h-2 w-2 rounded-full ${className}`} aria-hidden />;
+}
+
+function SectionHeader({
+  title,
+  subtitle,
+  right,
+}: {
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-4">
+      <div className="min-w-0">
+        <h2 className="text-sm font-medium text-slate-900 tracking-tight">{title}</h2>
+        {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+      </div>
+      {right ? <div className="shrink-0">{right}</div> : null}
+    </div>
+  );
+}
+
+function InventoryCard({ metric }: { metric: InventoryMetric }) {
+  const status = getInventoryStatus(metric.current, metric.minRequired);
+  const progress = clamp((metric.current / metric.minRequired) * 100, 0, 130);
+  const critical = status === "Critical";
+
+  const styles =
+    status === "Healthy" ? tone.success : status === "Low" ? tone.warning : tone.danger;
+
+  return (
+    <div
+      className={[
+        "rounded-lg border p-4 shadow-sm",
+        HOVER_LIFT_CARD,
+        critical ? "border-red-200 bg-red-50" : "border-slate-200 bg-white",
+      ].join(" ")}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-slate-900">{metric.group}</p>
+            <span className={`inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium ${styles.pill}`}>
+              <StatusDot className={styles.dot} />
+              {status}
+            </span>
+          </div>
+          <p className="mt-2 text-2xl font-medium text-slate-900 tabular-nums">
+            {metric.current}
+            <span className="ml-1 text-sm font-medium text-slate-500">units</span>
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Threshold <span className="font-medium text-slate-700 tabular-nums">{metric.minRequired}</span>
+          </p>
+        </div>
+
+        <div className="flex flex-col items-end gap-2">
+          <Sparkline data={metric.trend} stroke={styles.spark} />
+          <p className="text-xs text-slate-500">7d trend</p>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between text-xs text-slate-500">
+          <span>Health</span>
+          <span className="tabular-nums">{Math.round(progress)}%</span>
+        </div>
+        <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+          <div className={`h-full ${styles.bar}`} style={{ width: `${clamp(progress, 0, 100)}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SosBanner({
+  bloodGroup,
+  patient,
+  facility,
+  contact,
+  onDispatch,
+}: {
+  bloodGroup: string;
+  patient: string;
+  facility: string;
+  contact: string;
+  onDispatch: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="mt-0.5 rounded-md bg-red-600 p-2 text-white">
+            <AlertCircle size={18} strokeWidth={1.5} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-medium text-red-950">SOS request</p>
+              <span className="inline-flex items-center rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-900">
+                {bloodGroup} needed
+              </span>
+              <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600">
+                Priority: Critical
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-red-900">
+              {patient} • {facility} • {contact}
+            </p>
+            <p className="mt-1 text-sm text-red-800/80">
+              Dispatch from nearest store or notify verified donors.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onDispatch}
+            className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            Dispatch now
+          </button>
+          <button className="inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-900 hover:bg-red-100/60">
+            Create broadcast
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeliveryStepper({ deliveries }: { deliveries: Delivery[] }) {
+  return (
+    <div className={`${tone.neutral.card} p-4 shadow-sm ${HOVER_LIFT_CARD}`}>
+      <SectionHeader
+        title="Live tracking"
+        subtitle="Condensed delivery timeline"
+        right={<span className="text-xs text-slate-500">{deliveries.length} active</span>}
+      />
+
+      <div className="mt-4 space-y-4">
+        {deliveries.map((d, idx) => {
+          const isActive = d.status !== "Delivered";
+          const dotClass = d.status === "Delivered" ? "bg-emerald-600" : "bg-blue-600";
+          return (
+            <div key={d.id} className="relative pl-6">
+              {idx !== deliveries.length - 1 ? (
+                <div className="absolute left-[7px] top-3 bottom-0 w-px bg-slate-200" aria-hidden />
+              ) : null}
+              <div className="absolute left-0 top-1.5" aria-hidden>
+                <span className={`relative flex h-4 w-4 items-center justify-center rounded-full ${dotClass} ${isActive ? "ring-4 ring-blue-100 motion-safe:animate-pulse" : "ring-4 ring-emerald-100"}`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                </span>
+              </div>
+
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{d.target}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {d.id} • {d.status}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs font-medium text-slate-700 tabular-nums">ETA {d.eta}</span>
+              </div>
+
+              <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full bg-blue-600" style={{ width: `${clamp(d.progress, 0, 100)}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RecentDonorTable({ logs, onViewHistory }: { logs: DonorLog[]; onViewHistory: () => void }) {
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return logs;
+    return logs.filter((l) => `${l.name} ${l.bloodGroup} ${l.status}`.toLowerCase().includes(q));
+  }, [logs, query]);
+
+  return (
+    <div className={`${tone.neutral.card} overflow-hidden shadow-sm ${HOVER_LIFT_CARD}`}>
+      <div className="p-4 border-b border-slate-200">
+        <SectionHeader
+          title="Recent donor logs"
+          subtitle="Headless table layout (clean + minimal)"
+          right={
+            <div className="relative w-full max-w-[320px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} strokeWidth={1.5} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search donors…"
+                className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+          }
+        />
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-[720px] w-full">
+          <thead>
+            <tr className="border-b border-slate-200">
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Donor</th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Blood group</th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Last donation</th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Status</th>
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-slate-500">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((row) => {
+              const statusStyles =
+                row.status === "Verified"
+                  ? { dot: "bg-emerald-600", text: "text-slate-700" }
+                  : row.status === "Pending"
+                  ? { dot: "bg-amber-500", text: "text-slate-700" }
+                  : { dot: "bg-red-600", text: "text-slate-700" };
+
+              return (
+                <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/70">
+                  <td className="px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{row.name}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">Donor ID: {row.id}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700">
+                      {row.bloodGroup}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-slate-700 tabular-nums">{row.lastDonation}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-2 text-sm ${statusStyles.text}`}>
+                      <StatusDot className={statusStyles.dot} />
+                      {row.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={onViewHistory}
+                      className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="p-4 text-xs text-slate-500">
+        Showing <span className="font-medium text-slate-700">{filtered.length}</span> of{" "}
+        <span className="font-medium text-slate-700">{logs.length}</span>
+      </div>
+    </div>
+  );
+}
+
+export default function BloodHubAdminPanel() {
   const router = useRouter();
 
-  // NGO Overall Impact Stats
-  const impactStats = [
-    { label: "Lives Saved", value: "1,284", icon: Heart, color: "text-rose-500", bg: "bg-rose-50" },
-    { label: "Active Donors", value: "850+", icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
-    { label: "Hospitals Served", value: "42", icon: Activity, color: "text-emerald-500", bg: "bg-emerald-50" },
-    { label: "Success Rate", value: "99.2%", icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-50" },
+  const kpis = [
+    { label: "Lives saved", value: "1,284", icon: HeartPulse, sub: "Rolling 12 months" },
+    { label: "Active donors", value: "850+", icon: Users, sub: "Verified + reachable" },
+    { label: "Hospitals served", value: "42", icon: Building2, sub: "Across 6 cities" },
+    { label: "SLA compliance", value: "99.2%", icon: ShieldCheck, sub: "Emergency dispatch" },
+  ] as const;
+
+  const inventory: InventoryMetric[] = [
+    { group: "O+", current: 12, minRequired: 15, trend: [16, 15, 14, 13, 12, 12, 12] },
+    { group: "A-", current: 2, minRequired: 5, trend: [6, 5, 5, 4, 3, 3, 2] },
+    { group: "B+", current: 25, minRequired: 10, trend: [18, 20, 22, 24, 26, 25, 25] },
+    { group: "AB+", current: 8, minRequired: 5, trend: [5, 5, 6, 7, 7, 8, 8] },
   ];
 
-  // Stock Management (Minimum vs Current)
-  const stockMetrics = [
-    { group: "O+", current: 12, minRequired: 15, status: "Low" },
-    { group: "A-", current: 2, minRequired: 5, status: "Critical" },
-    { group: "B+", current: 25, minRequired: 10, status: "Healthy" },
-    { group: "AB+", current: 8, minRequired: 5, status: "Healthy" },
+  const deliveries: Delivery[] = [
+    { id: "TRK-882", target: "City Hospital", eta: "8m", status: "On Way", progress: 65 },
+    { id: "TRK-901", target: "Apollo Clinic", eta: "14m", status: "Dispatching", progress: 20 },
+    { id: "TRK-933", target: "Careline ER", eta: "—", status: "Delivered", progress: 100 },
   ];
 
-  // Ongoing Deliveries for Tracking
-  const liveDeliveries = [
-    { id: "TRK-882", target: "City Hospital", eta: "8 mins", status: "On Way", progress: 65 },
-    { id: "TRK-901", target: "Apollo Clinic", eta: "14 mins", status: "Dispatching", progress: 20 },
+  const donorLogs: DonorLog[] = [
+    { id: "DNR-201", name: "Sakshi Jain", bloodGroup: "O+", lastDonation: "Apr 12, 2026", status: "Verified" },
+    { id: "DNR-188", name: "Rahul Mehta", bloodGroup: "A-", lastDonation: "Mar 28, 2026", status: "Verified" },
+    { id: "DNR-241", name: "Neha Singh", bloodGroup: "B+", lastDonation: "Apr 19, 2026", status: "Pending" },
+    { id: "DNR-176", name: "Aman Verma", bloodGroup: "AB+", lastDonation: "Feb 03, 2026", status: "Flagged" },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-10 font-sans text-slate-900">
-      <div className="max-w-[1600px] mx-auto space-y-8">
-        
-        {/* Header Section */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-rose-600 p-2.5 rounded-2xl shadow-xl shadow-rose-200">
-                <Droplet className="text-white" size={32} fill="currentColor" />
-              </div>
-              <h1 className="text-4xl font-[1000] tracking-tight text-slate-900">Blood Command Center</h1>
-            </div>
-            <p className="text-slate-500 font-bold ml-1">Real-time Emergency & Inventory Management System</p>
-          </div>
-          
-          <div className="flex gap-3 w-full lg:w-auto bg-white p-2 rounded-[24px] shadow-sm border border-slate-100">
-             <button className="flex-1 lg:flex-none px-6 py-3 rounded-xl font-black text-slate-600 hover:bg-slate-50 transition-all border border-transparent">Analytics</button>
-             <button className="flex-1 lg:flex-none bg-rose-600 text-white px-8 py-3 rounded-xl font-black shadow-lg shadow-rose-200 hover:scale-105 transition-all flex items-center gap-2">
-               <Plus size={20} strokeWidth={3} /> New Donation
-             </button>
-          </div>
+    <div className="space-y-8 p-4 md:p-6">
+      <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-medium tracking-tight text-slate-900">Blood Bank</h1>
+          <p className="mt-1 text-sm text-slate-500">Command Center overview for inventory, tracking, and logs.</p>
         </div>
 
-        {/* Impact & Lives Saved (New Detail) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {impactStats.map((stat, idx) => (
-            <div key={idx} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-5">
-              <div className={`${stat.bg} ${stat.color} p-4 rounded-2xl`}>
-                <stat.icon size={28} />
-              </div>
-              <div>
-                <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">{stat.label}</p>
-                <p className="text-2xl font-[1000] tracking-tight">{stat.value}</p>
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <button
+            onClick={() => router.push("/admin/blood-bank/inventory")}
+            className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            View inventory
+          </button>
+          <button
+            onClick={() => router.push("/admin/blood-bank/tracking")}
+            className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium ${tone.primary.button}`}
+          >
+            Open tracking
+          </button>
         </div>
+      </header>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          
-          {/* Left Column (8 units): Inventory & Registry */}
-          <div className="xl:col-span-8 space-y-8">
-            
-            {/* Smart Inventory Section (New Detail) */}
-            <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-black flex items-center gap-2">
-                  <PackageCheck className="text-rose-600" /> Inventory Health Check
-                </h3>
-                <span className="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full text-slate-500 uppercase">Auto-updated</span>
+      <SosBanner
+        bloodGroup="A-"
+        patient="Shivam"
+        facility="Apollo Hospital"
+        contact="+91 98765 43210"
+        onDispatch={() => router.push("/admin/blood-bank/tracking")}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className={`${tone.neutral.card} p-4 shadow-sm ${HOVER_LIFT_CARD}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{kpi.label}</p>
+                <p className="mt-2 text-2xl font-medium text-slate-900 tabular-nums">{kpi.value}</p>
+                <p className="mt-1 text-sm text-slate-500">{kpi.sub}</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stockMetrics.map((stock) => (
-                  <div key={stock.group} className="relative p-5 rounded-3xl border border-slate-50 bg-slate-50/50">
-                    <p className="text-3xl font-[1000] mb-1">{stock.group}</p>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase">Current Stock</p>
-                        <p className={`text-xl font-black ${stock.status === 'Critical' ? 'text-rose-600' : 'text-slate-700'}`}>{stock.current} Units</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase">Threshold</p>
-                        <p className="text-sm font-bold text-slate-500 italic">min {stock.minRequired}</p>
-                      </div>
-                    </div>
-                    {stock.current < stock.minRequired && (
-                      <div className="absolute -top-2 -right-2 bg-rose-500 text-white p-1 rounded-full animate-pulse">
-                        <AlertCircle size={14} />
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div className="rounded-md border border-slate-200 bg-white p-2 text-slate-700">
+                <kpi.icon size={18} strokeWidth={1.5} />
               </div>
             </div>
+          </div>
+        ))}
+      </div>
 
-            {/* Registry Table (Original logic, improved UI) */}
-            <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between gap-4">
-                <h3 className="text-xl font-black italic">Recent Donor Logs</h3>
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input type="text" placeholder="Search registry..." className="bg-slate-50 border-none rounded-2xl py-3 pl-12 pr-6 text-sm font-bold w-full md:w-80" />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        <section className="xl:col-span-8 space-y-8">
+          <div className={`${tone.neutral.card} p-4 shadow-sm ${HOVER_LIFT_CARD}`}>
+            <SectionHeader
+              title="Inventory health"
+              subtitle="Progress + sparklines per blood group"
+              right={
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                    <StatusDot className="bg-blue-600" /> Auto-refresh
+                  </span>
+                  <button
+                    onClick={() => router.push("/admin/blood-bank/inventory")}
+                    className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    View all
+                  </button>
                 </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50/50">
-                    <tr>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase text-left">Donor</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase">Blood Group</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase">Status</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {[1, 2, 3].map((i) => (
-                      <tr key={i} className="hover:bg-slate-50/50 transition-all group">
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center font-black text-indigo-600">S{i}</div>
-                            <div>
-                              <p className="font-black text-sm text-slate-900 tracking-tight">Donor Name {i}</p>
-                              <p className="text-[11px] font-bold text-slate-400">Regular Donor</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6 text-center">
-                          <span className="bg-rose-50 text-rose-600 font-black px-4 py-1.5 rounded-xl border border-rose-100">O+</span>
-                        </td>
-                        <td className="px-8 py-6 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                             <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                             <span className="text-xs font-black text-slate-600">Verified</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6 text-right">
-                          <button className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-rose-600 transition-all">VIEW FULL HISTORY</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              }
+            />
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {inventory.map((metric) => (
+                <InventoryCard key={metric.group} metric={metric} />
+              ))}
             </div>
           </div>
 
-          {/* Right Column (4 units): Live Tracking & Alerts */}
-          <div className="xl:col-span-4 space-y-8">
-            
-            {/* Live Delivery Tracking (New Detail) */}
-            <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm overflow-hidden relative">
-              <div className="flex items-center gap-2 mb-6">
-                <Truck className="text-blue-600 animate-bounce" size={24} />
-                <h3 className="text-xl font-[1000]">Live Tracking</h3>
-              </div>
-              <div className="space-y-8">
-                {liveDeliveries.map((delivery) => (
-                  <div key={delivery.id} className="relative">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="text-sm font-black text-slate-900">{delivery.target}</p>
-                        <p className="text-[10px] font-bold text-slate-400">Unit ID: {delivery.id}</p>
-                      </div>
-                      <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg italic">ETA: {delivery.eta}</span>
-                    </div>
-                    {/* Progress Bar */}
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-blue-600 h-full rounded-full transition-all" style={{width: `${delivery.progress}%`}}></div>
-                    </div>
-                    <p className="text-[10px] mt-2 font-black text-slate-500 uppercase flex items-center gap-1">
-                      <Info size={12} /> {delivery.status}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <button 
-                onClick={() => router.push('/admin/track-blood')}
-                className="w-full mt-8 border-2 border-dashed border-slate-200 py-4 rounded-3xl text-slate-400 font-black text-xs hover:border-blue-400 hover:text-blue-500 transition-all"
+          <div className="relative">
+            <RecentDonorTable logs={donorLogs} onViewHistory={() => router.push("/admin/blood-bank/logs")} />
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={() => router.push("/admin/blood-bank/logs")}
+                className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
               >
-                OPEN GLOBAL TRACKING MAP
+                View full history
               </button>
             </div>
-
-            {/* Emergency Alerts */}
-            <div className="bg-rose-600 rounded-[40px] p-8 text-white shadow-2xl shadow-rose-300">
-              <div className="flex items-center gap-3 mb-6">
-                <AlertCircle className="animate-pulse" />
-                <h3 className="text-xl font-black italic">SOS Requests</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="bg-white/10 p-5 rounded-3xl border border-white/20">
-                  <p className="font-black text-lg">A- Negative Needed</p>
-                  <p className="text-xs font-bold text-rose-100 mb-4 tracking-wide">Patient: Shivam | Apollo Hospital</p>
-                  <button className="w-full bg-white text-rose-600 py-3 rounded-2xl font-black text-xs">DISPATCH IMMEDIATELY</button>
-                </div>
-              </div>
-            </div>
-
           </div>
+        </section>
 
-        </div>
+        <section className="xl:col-span-4 space-y-8">
+          <DeliveryStepper deliveries={deliveries} />
+
+          <div className={`${tone.neutral.card} p-4 shadow-sm ${HOVER_LIFT_CARD}`}>
+            <SectionHeader title="Actions" subtitle="Quick links for operators" />
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <button
+                onClick={() => router.push("/admin/blood-bank/donors")}
+                className="inline-flex items-center justify-between rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Users size={18} strokeWidth={1.5} />
+                  Donors
+                </span>
+                <span className="text-xs text-slate-500">Directory</span>
+              </button>
+
+              <button
+                onClick={() => router.push("/admin/blood-bank/inventory")}
+                className="inline-flex items-center justify-between rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Droplet size={18} strokeWidth={1.5} />
+                  Inventory
+                </span>
+                <span className="text-xs text-slate-500">Stock</span>
+              </button>
+
+              <button
+                onClick={() => router.push("/admin/blood-bank/tracking")}
+                className="inline-flex items-center justify-between rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Truck size={18} strokeWidth={1.5} />
+                  Live tracking
+                </span>
+                <span className="text-xs text-blue-100">Open</span>
+              </button>
+
+              <button
+                onClick={() => router.push("/admin/blood-bank/logs")}
+                className="inline-flex items-center justify-between rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Building2 size={18} strokeWidth={1.5} />
+                  Logs
+                </span>
+                <span className="text-xs text-slate-500">Audit</span>
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
