@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import React, { useEffect, useMemo } from "react";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 
 type Workshop = {
@@ -63,6 +63,19 @@ const createSvgMarker = (color: string) => {
 };
 
 const BLUE_MARKER_ICON = createSvgMarker("#2563EB");
+
+const FitToWorkshops = ({ points }: { points: { lat: number; lng: number }[] }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (points.length > 0) {
+      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    }
+  }, [points, map]);
+
+  return null;
+};
 
 export default function GlobalEventMap({ 
   isLoading = false, 
@@ -131,6 +144,7 @@ export default function GlobalEventMap({
           style={{ zIndex: 0 }}
         >
           <TileLayer url={CARTO_POSITRON_URL} attribution={CARTO_POSITRON_ATTRIBUTION} subdomains="abcd" />
+          <FitToWorkshops points={activeWorkshopsWithCoords.map(({ lat, lng }) => ({ lat, lng }))} />
 
           {activeWorkshopsWithCoords.map(({ w, lat, lng }) => {
             const ngoName = ngoNameById.get(w.ngo) ?? `NGO #${w.ngo}`;

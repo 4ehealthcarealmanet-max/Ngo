@@ -87,6 +87,90 @@ class Command(BaseCommand):
             if changed:
                 workshop.save()
 
+        dewas_ngo, dewas_ngo_created = NGOProfile.objects.get_or_create(
+            registration_number="MP/DWS/2026/001",
+            defaults={
+                "name": "Dewas Rural Welfare Society",
+                "city": "Dewas",
+                "service_type": "Mental Health & Community Wellness",
+                "is_verified": True,
+                "contact_email": "",
+                "contact_person": "",
+            },
+        )
+
+        if not dewas_ngo_created:
+            changed = False
+            if dewas_ngo.name != "Dewas Rural Welfare Society":
+                dewas_ngo.name = "Dewas Rural Welfare Society"
+                changed = True
+            if dewas_ngo.city != "Dewas":
+                dewas_ngo.city = "Dewas"
+                changed = True
+            if dewas_ngo.service_type != "Mental Health & Community Wellness":
+                dewas_ngo.service_type = "Mental Health & Community Wellness"
+                changed = True
+            if dewas_ngo.is_verified is not True:
+                dewas_ngo.is_verified = True
+                changed = True
+            if changed:
+                dewas_ngo.save()
+
+        dewas_workshop, dewas_workshop_created = Workshop.objects.get_or_create(
+            ngo=dewas_ngo,
+            title="Adolescent Mental Health & Wellness Workshop",
+            date=date(2026, 4, 20),
+            defaults={
+                "expert_name": "Dr. Riya Sharma",
+                "description": (
+                    "A community workshop focused on adolescent mental health, stress management, and wellness practices. "
+                    "Open for students, parents, and volunteers."
+                ),
+                "full_description": (
+                    "This workshop covers common adolescent mental health challenges, early warning signs, and practical tools "
+                    "for resilience. Participants will learn breathing techniques, daily routines for well-being, and how to access "
+                    "local support resources."
+                ),
+                "image_url": "/AdolescentMentalHealth.png",
+                "is_open": True,
+                "latitude": "22.967600",
+                "longitude": "76.053400",
+            },
+        )
+
+        if not dewas_workshop_created:
+            changed = False
+            if dewas_workshop.expert_name != "Dr. Riya Sharma":
+                dewas_workshop.expert_name = "Dr. Riya Sharma"
+                changed = True
+            if not (dewas_workshop.description or "").strip():
+                dewas_workshop.description = (
+                    "A community workshop focused on adolescent mental health, stress management, and wellness practices. "
+                    "Open for students, parents, and volunteers."
+                )
+                changed = True
+            if not (dewas_workshop.full_description or "").strip():
+                dewas_workshop.full_description = (
+                    "This workshop covers common adolescent mental health challenges, early warning signs, and practical tools "
+                    "for resilience. Participants will learn breathing techniques, daily routines for well-being, and how to access "
+                    "local support resources."
+                )
+                changed = True
+            if (dewas_workshop.image_url or "").strip() != "/AdolescentMentalHealth.png":
+                dewas_workshop.image_url = "/AdolescentMentalHealth.png"
+                changed = True
+            if dewas_workshop.is_open is not True:
+                dewas_workshop.is_open = True
+                changed = True
+            if str(dewas_workshop.latitude or "") != "22.967600":
+                dewas_workshop.latitude = "22.967600"
+                changed = True
+            if str(dewas_workshop.longitude or "") != "76.053400":
+                dewas_workshop.longitude = "76.053400"
+                changed = True
+            if changed:
+                dewas_workshop.save()
+
         if options.get("with_patient"):
             patient, _ = PatientProfile.objects.get_or_create(
                 patient_id="MB-2026-X99",
@@ -128,4 +212,8 @@ class Command(BaseCommand):
         self.stdout.write(f"NGO: {ngo.name} (id={ngo.id})")
         self.stdout.write(
             f"Workshop: {workshop.title} (id={workshop.id}) lat={workshop.latitude} lng={workshop.longitude} is_open={workshop.is_open}"
+        )
+        self.stdout.write(f"NGO: {dewas_ngo.name} (id={dewas_ngo.id})")
+        self.stdout.write(
+            f"Workshop: {dewas_workshop.title} (id={dewas_workshop.id}) lat={dewas_workshop.latitude} lng={dewas_workshop.longitude} image_url={dewas_workshop.image_url} is_open={dewas_workshop.is_open}"
         )

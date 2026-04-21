@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 const config: Config = {
   content: [
@@ -7,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Inter", "Geist", "ui-sans-serif", "system-ui", ...defaultTheme.fontFamily.sans],
+      },
       colors: {
         // Professional Healthcare Palette (Same as yours)
         brand: {

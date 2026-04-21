@@ -33,7 +33,12 @@ export default async function WorkshopDetailPage({ params }: { params: Promise<{
   const workshop = await fetchWorkshop(id);
   if (!workshop) notFound();
 
-  const imageSrc = (workshop.image_url ?? "").trim() || "/maternalhealthworkshop.png";
+  const normalizedTitle = (workshop.title ?? "").trim().toLowerCase();
+  const fallbackImage =
+    normalizedTitle === "adolescent mental health & wellness workshop"
+      ? "/AdolescentMentalHealth.png"
+      : "/maternalhealthworkshop.png";
+  const imageSrc = (workshop.image_url ?? "").trim() || fallbackImage;
   const overview = (workshop.full_description ?? "").trim() || (workshop.description ?? "").trim();
   const location = (await fetchNgoCity(workshop.ngo)) ?? "Dewas / Indore";
 

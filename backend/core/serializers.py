@@ -48,6 +48,18 @@ class WorkshopSerializer(serializers.ModelSerializer):
         model = Workshop
         fields = "__all__"
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        image_url = (data.get("image_url") or "").strip()
+        if image_url:
+            return data
+
+        title = (data.get("title") or "").strip().lower()
+        if title == "adolescent mental health & wellness workshop":
+            data["image_url"] = "/AdolescentMentalHealth.png"
+
+        return data
+
 
 class DonorSerializer(serializers.ModelSerializer):
     total_donated = serializers.SerializerMethodField()

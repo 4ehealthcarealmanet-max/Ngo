@@ -613,7 +613,11 @@ function LandingPageContent() {
                       <span className="text-xs font-bold text-brand-blue bg-blue-50 px-4 py-2 rounded-xl">
                         {ngo.service_type}
                       </span>
-                      <button className="text-sm font-bold text-slate-900 hover:text-brand-blue transition-colors group-hover:underline decoration-2 underline-offset-4">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/ngos/${ngo.id}`)}
+                        className="text-sm font-bold text-slate-900 hover:text-brand-blue transition-colors group-hover:underline decoration-2 underline-offset-4"
+                      >
                         View Details →
                       </button>
                     </div>
