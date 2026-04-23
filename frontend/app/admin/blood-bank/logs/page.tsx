@@ -1,167 +1,288 @@
 "use client";
-import React, { useMemo, useState } from "react";
-import { Download, FileText, Search } from "lucide-react";
 
-type LogStatus = "Completed" | "Pending" | "Failed";
-type LogType = "Dispatch" | "Replenish" | "Audit";
+import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { Building2, Droplet, History, Plus, Search } from "lucide-react";
+import BloodBankTabs from "../components/BloodBankTabs";
+import TransferStepper from "../components/TransferStepper";
+import { Skeleton } from "../components/Skeleton";
+import type { BloodGroup, TransferLog, TransferLogStatus } from "../lib/bloodBankApi";
+import { BLOOD_GROUPS, createTransferLog, getTransferLogs } from "../lib/bloodBankApi";
+import { publishBloodBankEvent } from "../lib/realtime";
+import { PREMIUM_CARD, PREMIUM_ICON_CHIP, PREMIUM_INPUT, PREMIUM_PILL } from "../lib/ui";
 
-type TransferLog = {
-  id: string;
-  type: LogType;
-  facility: string;
-  bloodGroup: string;
-  units: number;
-  status: LogStatus;
-  createdAt: string;
-  reason: string;
-};
+function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
 
-const LOGS: TransferLog[] = [
-  { id: "TXN-8820", type: "Dispatch", facility: "City Hospital", bloodGroup: "O+", units: 2, status: "Completed", createdAt: "Apr 20, 2026", reason: "Emergency surgery" },
-  { id: "TXN-8815", type: "Replenish", facility: "Apollo Clinic", bloodGroup: "B+", units: 5, status: "Pending", createdAt: "Apr 19, 2026", reason: "Routine restock" },
-  { id: "TXN-8802", type: "Audit", facility: "Central Store", bloodGroup: "A-", units: 0, status: "Completed", createdAt: "Apr 18, 2026", reason: "Weekly audit" },
-  { id: "TXN-8791", type: "Dispatch", facility: "Careline ER", bloodGroup: "AB+", units: 1, status: "Failed", createdAt: "Apr 17, 2026", reason: "Route interrupted" },
-];
+const STATUS: Array<"All" | TransferLogStatus> = ["All", "Request Received", "Dispatched", "In Transit", "Delivered"];
 
-const HOVER_LIFT_CARD = "hover:shadow-xl hover:-translate-y-2 transition-all duration-300";
-
-const statusPill = (status: LogStatus) => {
-  if (status === "Completed") return "border-emerald-200 bg-emerald-50 text-emerald-900";
-  if (status === "Pending") return "border-amber-200 bg-amber-50 text-amber-900";
-  return "border-red-200 bg-red-50 text-red-900";
-};
-
-export default function TransferLogs() {
+export default function TransferLogsPage() {
+  const [logs, setLogs] = useState<TransferLog[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [type, setType] = useState<LogType | "All">("All");
-  const [status, setStatus] = useState<LogStatus | "All">("All");
+  const [bloodGroup, setBloodGroup] = useState<"All" | BloodGroup>("All");
+  const [status, setStatus] = useState<(typeof STATUS)[number]>("All");
+
+  const [creating, setCreating] = useState(false);
+  const [newLog, setNewLog] = useState({
+    destination_hospital: "",
+    blood_group: "O+" as BloodGroup,
+    units_transferred: 1,
+    status: "Request Received" as TransferLogStatus,
+    rider_contact: "",
+  });
+
+  async function refresh() {
+    try {
+      setError(null);
+      const data = await getTransferLogs();
+      setLogs(data);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load transfer logs.");
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    const id = window.setInterval(refresh, 15000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(() => {
+    const list = logs || [];
     const q = query.trim().toLowerCase();
-    return LOGS.filter((l) => {
-      const matchesQuery = !q || `${l.id} ${l.facility} ${l.bloodGroup} ${l.type} ${l.status} ${l.reason}`.toLowerCase().includes(q);
-      const matchesType = type === "All" || l.type === type;
-      const matchesStatus = status === "All" || l.status === status;
-      return matchesQuery && matchesType && matchesStatus;
-    });
-  }, [query, type, status]);
+    return list
+      .filter((l) => (bloodGroup === "All" ? true : l.blood_group === bloodGroup))
+      .filter((l) => (status === "All" ? true : l.status === status))
+      .filter((l) => (!q ? true : `${l.destination_hospital} ${l.blood_group} ${l.status}`.toLowerCase().includes(q)));
+  }, [logs, query, bloodGroup, status]);
+
+  async function onCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newLog.destination_hospital.trim() || newLog.units_transferred <= 0) return;
+    setCreating(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await createTransferLog({
+        destination_hospital: newLog.destination_hospital.trim(),
+        blood_group: newLog.blood_group,
+        units_transferred: newLog.units_transferred,
+        status: newLog.status,
+        rider_contact: newLog.rider_contact.trim() || undefined,
+      });
+      publishBloodBankEvent({ type: "transfer_created" });
+      setNewLog((p) => ({ ...p, destination_hospital: "", units_transferred: 1, rider_contact: "" }));
+      setNotice("Transfer log created. Inventory deducted automatically.");
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message || "Failed to create transfer log.");
+    } finally {
+      setCreating(false);
+    }
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-medium tracking-tight text-slate-900">Logs</h1>
-          <p className="mt-1 text-sm text-slate-500">Detailed transaction history for blood movements and audits.</p>
+          <h1 className="text-2xl font-medium tracking-tight text-slate-900">Transfer Logs</h1>
+          <p className="mt-1 text-sm text-slate-500">Create and audit blood transfers. Status updates drive live tracking.</p>
+          {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+          {notice ? <p className="mt-2 text-sm text-emerald-700">{notice}</p> : null}
         </div>
-
-        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center md:justify-end">
-          <div className="relative w-full md:w-[320px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} strokeWidth={1.5} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search transactions…"
-              className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            />
+        <div className="w-full lg:w-[760px] space-y-3">
+          <BloodBankTabs />
+          <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:justify-end">
+            <div className="w-full md:w-[200px]">
+              <select
+                value={bloodGroup}
+                onChange={(e) => setBloodGroup(e.target.value as any)}
+                className={PREMIUM_INPUT}
+              >
+                <option value="All">All groups</option>
+                {BLOOD_GROUPS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-full md:w-[220px]">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+                className={PREMIUM_INPUT}
+              >
+                {STATUS.map((s) => (
+                  <option key={s} value={s}>
+                    {s === "All" ? "All statuses" : s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative w-full md:flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} strokeWidth={1.5} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search destination or status..."
+                className={`py-2 pl-9 pr-3 ${PREMIUM_INPUT}`}
+              />
+            </div>
           </div>
-
-          <button className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            <Download size={16} strokeWidth={1.5} className="mr-2" />
-            Export
-          </button>
         </div>
       </header>
 
-      <section className={`rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden ${HOVER_LIFT_CARD}`}>
-        <div className="border-b border-slate-200 p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm font-medium text-slate-900 flex items-center gap-2">
-            <FileText size={18} strokeWidth={1.5} className="text-slate-700" /> Transaction history
-          </p>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <div className="w-full sm:w-[160px]">
-              <label className="sr-only" htmlFor="log-type">Type</label>
-              <select
-                id="log-type"
-                value={type}
-                onChange={(e) => setType(e.target.value as LogType | "All")}
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="All">All types</option>
-                <option value="Dispatch">Dispatch</option>
-                <option value="Replenish">Replenish</option>
-                <option value="Audit">Audit</option>
-              </select>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <section className="xl:col-span-8">
+          <div className={`${PREMIUM_CARD} overflow-hidden`}>
+            <div className="border-b border-slate-100 p-5 flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-900 flex items-center gap-2">
+                <History size={18} strokeWidth={1.5} className="text-slate-700" /> Logs
+              </p>
+              <p className="text-xs text-slate-500">
+                Showing <span className="font-medium text-slate-700">{filtered.length}</span>
+                {logs ? (
+                  <>
+                    {" "}
+                    of <span className="font-medium text-slate-700">{logs.length}</span>
+                  </>
+                ) : null}
+              </p>
             </div>
 
-            <div className="w-full sm:w-[160px]">
-              <label className="sr-only" htmlFor="log-status">Status</label>
-              <select
-                id="log-status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as LogStatus | "All")}
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="All">All status</option>
-                <option value="Completed">Completed</option>
-                <option value="Pending">Pending</option>
-                <option value="Failed">Failed</option>
-              </select>
+            <div className="p-5">
+              {logs ? (
+                filtered.length ? (
+                  <div className="space-y-3">
+                    {filtered.map((l) => (
+                      <motion.div
+                        key={l.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="rounded-3xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/50 p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                              <Building2 size={16} strokeWidth={1.5} className="text-slate-700" />
+                              <span className="truncate">{l.destination_hospital}</span>
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {l.blood_group} • {l.units_transferred} units • {formatDateTime(l.timestamp)}
+                            </p>
+                          </div>
+                          <span className={`${PREMIUM_PILL} border-slate-200 bg-white text-slate-700`}>#{l.id}</span>
+                        </div>
+                        <div className="mt-4">
+                          <TransferStepper status={l.status} />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : logs.length === 0 ? (
+                  <div className="py-10">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <div className="rounded-full bg-white p-3 text-slate-700 shadow-sm ring-1 ring-slate-100">
+                        <History size={22} strokeWidth={1.5} />
+                      </div>
+                      <p className="mt-3 text-sm font-medium text-slate-900">No transfer logs yet</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Create a transfer from the panel on the right to start live movements.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 text-sm text-slate-500">No logs match your filters.</div>
+                )
+              ) : (
+                <div className="p-2">
+                  <Skeleton className="h-24 w-full" />
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-[980px] w-full text-left">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">Txn</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">Type</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">Facility</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">Blood</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">Units</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">Status</th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">Created</th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-slate-500">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((row) => (
-                <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/70">
-                  <td className="px-4 py-3">
-                    <p className="text-sm font-medium text-slate-900">{row.id}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{row.reason}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{row.type}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{row.facility}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700">
-                      {row.bloodGroup}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-700 tabular-nums">{row.units}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium ${statusPill(row.status)}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-700 tabular-nums">{row.createdAt}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <aside className="xl:col-span-4">
+          <div className={`${PREMIUM_CARD} p-5`}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-medium text-slate-900">Create transfer</h2>
+                <p className="mt-1 text-sm text-slate-500">Creates a log and deducts inventory automatically.</p>
+              </div>
+              <div className={PREMIUM_ICON_CHIP}>
+                <Plus size={18} strokeWidth={1.5} />
+              </div>
+            </div>
 
-        <div className="p-4 text-xs text-slate-500">
-          Showing <span className="font-medium text-slate-700">{filtered.length}</span> of{" "}
-          <span className="font-medium text-slate-700">{LOGS.length}</span>
-        </div>
-      </section>
+            <form onSubmit={onCreate} className="mt-4 space-y-3">
+              <input
+                value={newLog.destination_hospital}
+                onChange={(e) => setNewLog((p) => ({ ...p, destination_hospital: e.target.value }))}
+                placeholder="Destination hospital"
+                className={PREMIUM_INPUT}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={newLog.blood_group}
+                  onChange={(e) => setNewLog((p) => ({ ...p, blood_group: e.target.value as BloodGroup }))}
+                  className={PREMIUM_INPUT}
+                >
+                  {BLOOD_GROUPS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={newLog.units_transferred}
+                  onChange={(e) => setNewLog((p) => ({ ...p, units_transferred: Number(e.target.value) || 0 }))}
+                  type="number"
+                  min={1}
+                  placeholder="Units"
+                  className={PREMIUM_INPUT}
+                />
+              </div>
+
+              <select
+                value={newLog.status}
+                onChange={(e) => setNewLog((p) => ({ ...p, status: e.target.value as TransferLogStatus }))}
+                className={PREMIUM_INPUT}
+              >
+                <option value="Request Received">Request Received</option>
+                <option value="Dispatched">Dispatched</option>
+                <option value="In Transit">In Transit</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+
+              <input
+                value={newLog.rider_contact}
+                onChange={(e) => setNewLog((p) => ({ ...p, rider_contact: e.target.value }))}
+                placeholder="Rider contact (optional)"
+                className={PREMIUM_INPUT}
+              />
+
+              <button
+                disabled={creating}
+                className="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-300 hover:bg-slate-900 hover:shadow-md disabled:opacity-60"
+              >
+                {creating ? "Creating..." : "Create log"}
+              </button>
+              <p className="text-xs text-slate-500 flex items-center gap-2">
+                <Droplet size={14} strokeWidth={1.5} className="text-slate-500" /> Insufficient stock returns a validation error.
+              </p>
+            </form>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
