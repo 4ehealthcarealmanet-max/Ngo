@@ -185,6 +185,7 @@ const sidebarItems = [
   { tab: "ngo", name: "NGO Management", icon: Building2 },
   { tab: "hospitals", name: "Hospital Management", icon: Activity },
   { tab: "verification_queue", name: "Verification Queue", icon: ClipboardCheck },
+  { tab: "blood_bank", name: "Blood Bank", icon: Heart }, // <--- Naya Item
   { tab: "donor", name: "Donor Database", icon: Heart },
   { tab: "map", name: "Global Event Map", icon: MapIcon },
   { tab: "logs", name: "System Logs", icon: Settings },
@@ -3699,42 +3700,50 @@ export default function AdminDashboardPage() {
       {/* 1. Sidebar - Fixed Positioning taaki scroll na ho */}
       <aside className="fixed left-0 top-0 h-screen w-20 md:w-56 bg-white border-r border-slate-200 flex flex-col z-[100] shadow-xl pt-20">
         
+       
         <nav className="flex-1 px-3 space-y-2 pt-10">
-          {sidebarItems.map((item, index) => {
-            const isActive = activeTab === item.tab;
+  {sidebarItems.map((item, index) => {
+    const isActive = activeTab === item.tab;
 
-            return (
-              <a
-                key={index}
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveTab(item.tab);
-                }}
-                className={`group relative flex items-center gap-3 rounded-lg border-l-2 px-4 py-3 transition-all duration-200 ${
-                  isActive
-                    ? "border-l-4 border-blue-600 bg-blue-50 text-blue-600"
-                    : "border-transparent bg-transparent text-slate-500 hover:border-blue-400/30 hover:bg-slate-100 hover:text-blue-600 hover:translate-x-1"
-                }`}
-              >
-                <item.icon
-                  size={20}
-                  strokeWidth={isActive ? 2.5 : 2}
-                  className={`flex-shrink-0 transition-transform duration-200 ${
-                    isActive ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600 group-hover:scale-110"
-                  }`}
-                />
-                <span
-                  className={`font-medium hidden md:inline text-sm ${
-                    isActive ? "text-blue-600" : "text-slate-500 group-hover:text-blue-600"
-                  }`}
-                >
-                  {item.name}
-                </span>
-              </a>
-            );
-          })}
-        </nav>
+    return (
+      <a
+        key={index}
+        // LINKING LOGIC: Agar blood_bank hai toh direct path, warna '#'
+        href={item.tab === "blood_bank" ? "/admin/blood-bank" : "#"}
+        onClick={(e) => {
+          if (item.tab === "blood_bank") {
+            // Blood bank par click karne par naye page par bhej dega
+            router.push('/admin/blood-bank');
+          } else {
+            // Baaki tabs ke liye purana state logic chalega
+            e.preventDefault();
+            setActiveTab(item.tab);
+          }
+        }}
+        className={`group relative flex items-center gap-3 rounded-lg border-l-2 px-4 py-3 transition-all duration-200 ${
+          isActive
+            ? "border-l-4 border-blue-600 bg-blue-50 text-blue-600"
+            : "border-transparent bg-transparent text-slate-500 hover:border-blue-400/30 hover:bg-slate-100 hover:text-blue-600 hover:translate-x-1"
+        }`}
+      >
+        <item.icon
+          size={20}
+          strokeWidth={isActive ? 2.5 : 2}
+          className={`flex-shrink-0 transition-transform duration-200 ${
+            isActive ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600 group-hover:scale-110"
+          }`}
+        />
+        <span
+          className={`font-medium hidden md:inline text-sm ${
+            isActive ? "text-blue-600" : "text-slate-500 group-hover:text-blue-600"
+          }`}
+        >
+          {item.name}
+        </span>
+      </a>
+    );
+  })}
+</nav>
 
         <div className="p-4 border-t border-slate-100 mb-4">
           <button 
@@ -3822,25 +3831,28 @@ export default function AdminDashboardPage() {
               ngos={ecosystemData.ngos}
               registrations={ecosystemData.registrations}
             />
-          ) : activeTab === "logs" ? (
-            <SystemLogs
-              isLoading={isLoading}
-              ngos={ecosystemData.ngos}
-              registrations={ecosystemData.registrations}
-              donors={ecosystemData.donors}
-              donations={ecosystemData.donations}
-              customEntries={customSystemLogs}
-            />
-          ) : (
-            <div className="p-8 space-y-3">
-              <h1 className="text-2xl font-black text-slate-900">
-                {sidebarItems.find((i) => i.tab === activeTab)?.name}
-              </h1>
-              <p className="text-sm font-semibold text-slate-500">This section is coming soon.</p>
-            </div>
-          )}
+       ) : activeTab === "logs" ? (
+            <SystemLogs
+              isLoading={isLoading}
+              ngos={ecosystemData.ngos}
+              registrations={ecosystemData.registrations}
+              donors={ecosystemData.donors}
+              donations={ecosystemData.donations}
+              customEntries={customSystemLogs}
+            />
+          ) :
+           (
+            <div className="p-8 space-y-3">
+              <h1 className="text-2xl font-black text-slate-900">
+                {sidebarItems.find((i) => i.tab === activeTab)?.name}
+              </h1>
+              <p className="text-sm font-semibold text-slate-500">This section is coming soon.</p>
+            </div>
+            
+          )}
 
-          {false && (
+
+         {false && (
           <div className="p-8 space-y-8">
           
           {/* Stats Cards with Hover Effect */}

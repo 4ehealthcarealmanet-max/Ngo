@@ -260,3 +260,118 @@ class Donation(models.Model):
 
     def __str__(self):
         return f"{self.donor.name} - {self.amount}"
+
+
+class BloodStock(models.Model):
+    BLOOD_GROUPS = [
+        ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'),
+        ('O+', 'O+'), ('O-', 'O-'), ('AB+', 'AB+'), ('AB-', 'AB-'),
+    ]
+    blood_group = models.CharField(max_length=5, choices=BLOOD_GROUPS, unique=True)
+    units_available = models.PositiveIntegerField(default=0)
+    total_donated = models.PositiveIntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.blood_group} ({self.units_available} Units)"
+
+
+class DonorRegistry(models.Model):
+    STATUS_AVAILABLE = "Available"
+    STATUS_PENDING = "Pending"
+
+    STATUS_CHOICES = [
+        (STATUS_AVAILABLE, "Available"),
+        (STATUS_PENDING, "Pending"),
+    ]
+
+    name = models.CharField(max_length=200)
+    blood_group = models.CharField(max_length=5, choices=BloodStock.BLOOD_GROUPS)
+    contact = models.CharField(max_length=40, blank=True, default="")
+    last_donation_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "NGO_DonorRegistry"
+        verbose_name = "Blood Donor"
+        verbose_name_plural = "Blood Donors"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.blood_group})"
+
+
+class BloodDonation(models.Model):
+    donor = models.ForeignKey(DonorRegistry, on_delete=models.CASCADE, related_name="donations")
+    blood_group = models.CharField(max_length=5, choices=BloodStock.BLOOD_GROUPS)
+    units_donated = models.PositiveIntegerField()
+    donated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "NGO_BloodDonations"
+        verbose_name = "Blood Donation"
+        verbose_name_plural = "Blood Donations"
+        ordering = ["-donated_at"]
+
+    def __str__(self):
+        return f"{self.donor.name} - {self.blood_group} ({self.units_donated})"
+
+
+class TransferLog(models.Model):
+    STATUS_REQUEST_RECEIVED = "Request Received"
+    STATUS_DISPATCHED = "Dispatched"
+    STATUS_IN_TRANSIT = "In Transit"
+    STATUS_DELIVERED = "Delivered"
+
+    STATUS_CHOICES = [
+        (STATUS_REQUEST_RECEIVED, "Request Received"),
+        (STATUS_DISPATCHED, "Dispatched"),
+        (STATUS_IN_TRANSIT, "In Transit"),
+        (STATUS_DELIVERED, "Delivered"),
+    ]
+
+    units_transferred = models.PositiveIntegerField()
+    destination_hospital = models.CharField(max_length=255)
+    blood_group = models.CharField(max_length=5, choices=BloodStock.BLOOD_GROUPS)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_REQUEST_RECEIVED)
+
+    # Optional tracking fields (for map preview)
+    current_lat = models.FloatField(null=True, blank=True)
+    current_lng = models.FloatField(null=True, blank=True)
+    rider_contact = models.CharField(max_length=20, blank=True, default="")
+
+    class Meta:
+        db_table = "NGO_TransferLogs"
+        verbose_name = "Transfer Log"
+        verbose_name_plural = "Transfer Logs"
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.destination_hospital} - {self.blood_group} ({self.units_transferred})"
+
+
+class BloodRequest(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Dispatched', 'Dispatched'),
+        ('Delivered', 'Delivered'),
+    ]
+    patient_name = models.CharField(max_length=150)
+    hospital_name = models.CharField(max_length=200)
+    blood_group = models.CharField(max_length=5)
+    units_required = models.PositiveIntegerField()
+    urgency_level = models.CharField(max_length=20, default='Normal') # Urgent, Normal
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    
+    # Tracking Fields
+    current_lat = models.FloatField(null=True, blank=True)
+    current_lng = models.FloatField(null=True, blank=True)
+    rider_contact = models.CharField(max_length=15, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.patient_name} - {self.blood_group}"

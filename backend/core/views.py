@@ -6,8 +6,28 @@ from django.shortcuts import get_object_or_404
 # Baaki imports ke saath ye bhi add karein
 from rest_framework import viewsets 
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
-from .models import Donation, Donor, Hospital, Referral, WorkshopRegistration # Ye import check kar lena
-from .serializers import DonationSerializer, DonorSerializer, HospitalSerializer, ReferralSerializer, WorkshopRegistrationSerializer # Ye bhi
+from .models import (
+    BloodDonation,
+    BloodStock,
+    Donation,
+    Donor,
+    DonorRegistry,
+    Hospital,
+    Referral,
+    TransferLog,
+    WorkshopRegistration,
+)  # Ye import check kar lena
+from .serializers import (
+    BloodDonationSerializer,
+    BloodStockSerializer,
+    DonationSerializer,
+    DonorRegistrySerializer,
+    DonorSerializer,
+    HospitalSerializer,
+    ReferralSerializer,
+    TransferLogSerializer,
+    WorkshopRegistrationSerializer,
+)  # Ye bhi
 
 from .models import NGOProfile, PatientProfile, ReferralNetwork, Workshop
 from .serializers import (
@@ -165,5 +185,73 @@ class ReferralViewSet(viewsets.ModelViewSet):
         hospital_id = self.request.query_params.get("hospital_id")
         if hospital_id:
             queryset = queryset.filter(to_hospital_id=hospital_id)
+
+        return queryset
+
+
+class BloodStockViewSet(viewsets.ModelViewSet):
+    queryset = BloodStock.objects.all().order_by("blood_group")
+    serializer_class = BloodStockSerializer
+
+    def list(self, request, *args, **kwargs):
+        # Ensure all blood groups exist for a complete dashboard grid.
+        existing = set(BloodStock.objects.values_list("blood_group", flat=True))
+        missing = [bg for bg, _ in BloodStock.BLOOD_GROUPS if bg not in existing]
+        if missing:
+            BloodStock.objects.bulk_create([BloodStock(blood_group=bg, units_available=0) for bg in missing])
+        return super().list(request, *args, **kwargs)
+
+
+class DonorRegistryViewSet(viewsets.ModelViewSet):
+    queryset = DonorRegistry.objects.all().order_by("name")
+    serializer_class = DonorRegistrySerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        q = (self.request.query_params.get("q") or "").strip()
+        blood_group = (self.request.query_params.get("blood_group") or "").strip()
+        status = (self.request.query_params.get("status") or "").strip()
+
+        if blood_group:
+            queryset = queryset.filter(blood_group=blood_group)
+        if status:
+            queryset = queryset.filter(status=status)
+        if q:
+            queryset = queryset.filter(Q(name__icontains=q) | Q(blood_group__icontains=q))
+
+        return queryset
+
+
+class BloodDonationViewSet(viewsets.ModelViewSet):
+    queryset = BloodDonation.objects.select_related("donor").all().order_by("-donated_at")
+    serializer_class = BloodDonationSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        donor_id = self.request.query_params.get("donor")
+        blood_group = (self.request.query_params.get("blood_group") or "").strip()
+        if donor_id:
+            queryset = queryset.filter(donor_id=donor_id)
+        if blood_group:
+            queryset = queryset.filter(blood_group=blood_group)
+        return queryset
+
+
+class TransferLogViewSet(viewsets.ModelViewSet):
+    queryset = TransferLog.objects.all().order_by("-timestamp")
+    serializer_class = TransferLogSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        blood_group = (self.request.query_params.get("blood_group") or "").strip()
+        status = (self.request.query_params.get("status") or "").strip()
+        q = (self.request.query_params.get("q") or "").strip()
+
+        if blood_group:
+            queryset = queryset.filter(blood_group=blood_group)
+        if status:
+            queryset = queryset.filter(status=status)
+        if q:
+            queryset = queryset.filter(Q(destination_hospital__icontains=q) | Q(blood_group__icontains=q))
 
         return queryset
