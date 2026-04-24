@@ -64,27 +64,29 @@ const createSvgMarker = (color: string) => {
 
 const BLUE_MARKER_ICON = createSvgMarker("#2563EB");
 
-const FitToWorkshops = ({ points }: { points: { lat: number; lng: number }[] }) => {
+function FitToWorkshops({
+  points,
+}: {
+  points: Array<{ lat: number; lng: number }>;
+}) {
   const map = useMap();
 
   useEffect(() => {
-    if (points.length > 0) {
-      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    if (!points.length) return;
+
+    if (points.length === 1) {
+      map.setView([points[0].lat, points[0].lng], 12, { animate: true });
+      return;
     }
-  }, [points, map]);
+
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13, animate: true });
+  }, [map, points]);
 
   return null;
-};
+}
 
-export default function GlobalEventMap({ 
-  isLoading = false, 
-  workshops = [], 
-  ngos = [], 
-  registrations = [] 
-}: GlobalEventMapProps) {
-
-  // NGO Mapping with Safety
+export default function GlobalEventMap({ isLoading, workshops, ngos, registrations }: GlobalEventMapProps) {
   const ngoNameById = useMemo(() => {
     const map = new Map<number, string>();
     const safeNgos = Array.isArray(ngos) ? ngos : [];
