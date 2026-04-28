@@ -5,29 +5,39 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 # Baaki imports ke saath ye bhi add karein
 from rest_framework import viewsets 
+from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from .models import (
-    BloodDonation,
-    BloodStock,
-    Donation,
-    Donor,
-    DonorRegistry,
+    #BloodDonation,
+    #BloodStock,
+    #Donation,
+    #Donor,
+    #DonorRegistry,
     Hospital,
     Referral,
-    TransferLog,
+    #TransferLog,
     WorkshopRegistration,
+    #EmergencyRequest, 
+    VolunteerDonor,
+    SOSRequest,
+    Notification
 )  # Ye import check kar lena
 from .serializers import (
-    BloodDonationSerializer,
-    BloodStockSerializer,
-    DonationSerializer,
-    DonorRegistrySerializer,
-    DonorSerializer,
+    #BloodDonationSerializer,
+    #BloodStockSerializer,
+    #DonationSerializer,
+    #DonorRegistrySerializer,
+    #DonorSerializer,
     HospitalSerializer,
     ReferralSerializer,
-    TransferLogSerializer,
+    #TransferLogSerializer,
     WorkshopRegistrationSerializer,
-)  # Ye bhi
+    #EmergencyRequestSerializer,
+    VolunteerDonorSerializer,
+    SOSRequestSerializer,
+    NotificationSerializer
+) 
 
 from .models import NGOProfile, PatientProfile, ReferralNetwork, Workshop
 from .serializers import (
@@ -35,7 +45,12 @@ from .serializers import (
     PatientProfileSerializer,
     ReferralNetworkSerializer,
     WorkshopSerializer,
+    
 )
+
+class VolunteerDonorViewSet(viewsets.ModelViewSet):
+    queryset = VolunteerDonor.objects.all()
+    serializer_class = VolunteerDonorSerializer
 
 class NGOListView(APIView):
     def get(self, request):
@@ -158,14 +173,14 @@ class HospitalViewSet(viewsets.ModelViewSet):
     serializer_class = HospitalSerializer
 
 
-class DonorViewSet(viewsets.ModelViewSet):
-    queryset = Donor.objects.all().order_by("name")
-    serializer_class = DonorSerializer
+#class DonorViewSet(viewsets.ModelViewSet):
+ #   queryset = Donor.objects.all().order_by("name")
+  #  serializer_class = DonorSerializer 
 
 
-class DonationViewSet(viewsets.ModelViewSet):
-    queryset = Donation.objects.select_related("donor", "workshop", "ngo").all()
-    serializer_class = DonationSerializer
+#class DonationViewSet(viewsets.ModelViewSet):
+ #   queryset = Donation.objects.select_related("donor", "workshop", "ngo").all()
+  #  serializer_class = DonationSerializer
 
 
 class ReferralViewSet(viewsets.ModelViewSet):
@@ -189,69 +204,64 @@ class ReferralViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class BloodStockViewSet(viewsets.ModelViewSet):
-    queryset = BloodStock.objects.all().order_by("blood_group")
-    serializer_class = BloodStockSerializer
-
-    def list(self, request, *args, **kwargs):
-        # Ensure all blood groups exist for a complete dashboard grid.
-        existing = set(BloodStock.objects.values_list("blood_group", flat=True))
-        missing = [bg for bg, _ in BloodStock.BLOOD_GROUPS if bg not in existing]
-        if missing:
-            BloodStock.objects.bulk_create([BloodStock(blood_group=bg, units_available=0) for bg in missing])
-        return super().list(request, *args, **kwargs)
 
 
-class DonorRegistryViewSet(viewsets.ModelViewSet):
-    queryset = DonorRegistry.objects.all().order_by("name")
-    serializer_class = DonorRegistrySerializer
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        q = (self.request.query_params.get("q") or "").strip()
-        blood_group = (self.request.query_params.get("blood_group") or "").strip()
-        status = (self.request.query_params.get("status") or "").strip()
+class SOSRequestViewSet(viewsets.ModelViewSet):
+    queryset = SOSRequest.objects.all()
+    serializer_class = SOSRequestSerializer
 
-        if blood_group:
-            queryset = queryset.filter(blood_group=blood_group)
-        if status:
-            queryset = queryset.filter(status=status)
-        if q:
-            queryset = queryset.filter(Q(name__icontains=q) | Q(blood_group__icontains=q))
+    @action(detail=True, methods=['post'], url_path='broadcast')
+    def broadcast(self, request, pk=None):
+        sos_request = self.get_object()
+        blood_needed = sos_request.blood_group.strip()
+        
+        # 1. Matching Donors dhundo jo available hain
+        donors = VolunteerDonor.objects.filter(
+            blood_group__icontains=blood_needed,
+            is_available=True
+        )
 
-        return queryset
+        if not donors.exists():
+            return Response({"status": "error", "message": "No donors found!"})
+
+        # 2. AUTOMATIC ENTRY: Har donor ke liye notification table mein data dalo
+        for donor in donors:
+            Notification.objects.get_or_create(
+                donor=donor,
+                sos_request=sos_request,
+                defaults={
+                    'message': f"Emergency: {blood_needed} required at {sos_request.hospital_name}",
+                    'status': 'Pending',
+                    'distance_km': 1.5 
+                }
+            )
+        
+        # 3. Status update karo
+        sos_request.status = "Broadcasting"
+        sos_request.save()
+
+        return Response({"status": "success", "message": "Broadcast started!"})
+
+    # --- YE FUNCTION AB ALAG HAI (INDENTATION FIXED) ---
+    @action(detail=True, methods=['post'], url_path='cancel_broadcast')
+    def cancel_broadcast(self, request, pk=None):
+        sos_request = self.get_object()
+        
+        # 1. Status ko wapas Pending karo
+        sos_request.status = "Pending" 
+        sos_request.save()
+        
+        # 2. Notification table se entries delete karo (IMPORTANT)
+        # Isse aapka Live Tracker se data apne aap hat jayega
+        Notification.objects.filter(sos_request=sos_request).delete()
+        
+        return Response({
+            "status": "success", 
+            "message": "Broadcast cancelled and tracker cleared."
+        })
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.all().order_by('-created_at')
+    serializer_class = NotificationSerializer
 
 
-class BloodDonationViewSet(viewsets.ModelViewSet):
-    queryset = BloodDonation.objects.select_related("donor").all().order_by("-donated_at")
-    serializer_class = BloodDonationSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        donor_id = self.request.query_params.get("donor")
-        blood_group = (self.request.query_params.get("blood_group") or "").strip()
-        if donor_id:
-            queryset = queryset.filter(donor_id=donor_id)
-        if blood_group:
-            queryset = queryset.filter(blood_group=blood_group)
-        return queryset
-
-
-class TransferLogViewSet(viewsets.ModelViewSet):
-    queryset = TransferLog.objects.all().order_by("-timestamp")
-    serializer_class = TransferLogSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        blood_group = (self.request.query_params.get("blood_group") or "").strip()
-        status = (self.request.query_params.get("status") or "").strip()
-        q = (self.request.query_params.get("q") or "").strip()
-
-        if blood_group:
-            queryset = queryset.filter(blood_group=blood_group)
-        if status:
-            queryset = queryset.filter(status=status)
-        if q:
-            queryset = queryset.filter(Q(destination_hospital__icontains=q) | Q(blood_group__icontains=q))
-
-        return queryset

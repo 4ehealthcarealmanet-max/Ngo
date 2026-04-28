@@ -1,21 +1,25 @@
 from django.contrib import admin
-
+from .models import VolunteerDonor, EmergencyRequest
 from .models import (
-    BloodDonation,
-    BloodRequest,
-    BloodStock,
-    Donation,
-    DonorRegistry,
-    Donor,
+    #BloodDonation,
+    #BloodRequest,
+    #BloodStock,
+    #Donation,
+    #DonorRegistry,
+    #Donor,
     Hospital,
     NGOProfile,
     PatientProfile,
     Referral,
     ReferralNetwork,
     ReferralStatusUpdate,
-    TransferLog,
+    #TransferLog,
     Workshop,
     WorkshopRegistration,
+    VolunteerDonor,
+    #EmergencyRequest,
+    Notification,
+    SOSRequest
 )
 
 @admin.register(NGOProfile)
@@ -73,51 +77,14 @@ class WorkshopRegistrationAdmin(admin.ModelAdmin):
     list_filter = ("role", "status", "workshop", "registered_at")
     search_fields = ("full_name", "email_or_phone")
 
+@admin.register(VolunteerDonor)
+class VolunteerDonorAdmin(admin.ModelAdmin):
+    list_display = ('name', 'blood_group', 'phone', 'is_available')
+    list_filter = ('blood_group', 'is_available')
 
-@admin.register(Donor)
-class DonorAdmin(admin.ModelAdmin):
-    list_display = ("name", "email", "phone", "donor_type", "created_at")
-    list_filter = ("donor_type", "created_at")
-    search_fields = ("name", "email", "phone")
+@admin.register(SOSRequest) # Yahan SOSRequest likho
+class SOSRequestAdmin(admin.ModelAdmin):
+    list_display = ('hospital_name', 'blood_group', 'units_required', 'status', 'created_at')
+    list_filter = ('status', 'blood_group')
 
-
-@admin.register(Donation)
-class DonationAdmin(admin.ModelAdmin):
-    list_display = ("donor", "amount", "donation_type", "purpose", "ngo", "workshop", "date", "transaction_id")
-    list_filter = ("donation_type", "purpose", "date")
-    search_fields = ("donor__name", "donor__email", "transaction_id")
-
-
-@admin.register(BloodStock)
-class BloodStockAdmin(admin.ModelAdmin):
-    list_display = ("blood_group", "units_available", "total_donated", "last_updated")
-    list_filter = ("blood_group",)
-    search_fields = ("blood_group",)
-
-
-@admin.register(DonorRegistry)
-class DonorRegistryAdmin(admin.ModelAdmin):
-    list_display = ("name", "blood_group", "status", "last_donation_date", "created_at")
-    list_filter = ("blood_group", "status")
-    search_fields = ("name", "contact")
-
-
-@admin.register(BloodDonation)
-class BloodDonationAdmin(admin.ModelAdmin):
-    list_display = ("donor", "blood_group", "units_donated", "donated_at")
-    list_filter = ("blood_group", "donated_at")
-    search_fields = ("donor__name",)
-
-
-@admin.register(TransferLog)
-class TransferLogAdmin(admin.ModelAdmin):
-    list_display = ("destination_hospital", "blood_group", "units_transferred", "status", "timestamp")
-    list_filter = ("blood_group", "status", "timestamp")
-    search_fields = ("destination_hospital", "rider_contact")
-
-
-@admin.register(BloodRequest)
-class BloodRequestAdmin(admin.ModelAdmin):
-    list_display = ("patient_name", "hospital_name", "blood_group", "units_required", "status", "created_at")
-    list_filter = ("blood_group", "status", "created_at")
-    search_fields = ("patient_name", "hospital_name")
+admin.site.register(Notification)
