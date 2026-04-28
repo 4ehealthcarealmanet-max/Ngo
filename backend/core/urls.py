@@ -1,31 +1,38 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .views import VolunteerDonorViewSet
 from .views import (
-    BloodDonationViewSet,
-    BloodStockViewSet,
-    DonationViewSet,
-    DonorViewSet,
-    DonorRegistryViewSet,
+    #BloodDonationViewSet,
+    #BloodStockViewSet,
+    #DonationViewSet,
+    #DonorViewSet,
+    #DonorRegistryViewSet,
     HospitalViewSet,
     NGOProfileViewSet,
     ReferralViewSet,
-    TransferLogViewSet,
-    WorkshopRegistrationViewSet
+    #TransferLogViewSet,
+    WorkshopRegistrationViewSet,
+    VolunteerDonor,
+    #EmergencyRequest,
+    SOSRequestViewSet,
+    NotificationViewSet
 )
 
 # 1. Router setup karein ViewSets ke liye
 router = DefaultRouter()
 router.register(r'ngos', NGOProfileViewSet)
-router.register(r'donors', DonorViewSet)
-router.register(r'donations', DonationViewSet)
+#router.register(r'donors', DonorViewSet)
+#router.register(r'donations', DonationViewSet)
 router.register(r'registrations', WorkshopRegistrationViewSet)
 router.register(r'hospitals', HospitalViewSet)
 router.register(r'referrals', ReferralViewSet)
-router.register(r'blood-stocks', BloodStockViewSet)
-router.register(r'blood-donors', DonorRegistryViewSet)
-router.register(r'blood-donations', BloodDonationViewSet)
-router.register(r'transfer-logs', TransferLogViewSet)
-
+#router.register(r'blood-stocks', BloodStockViewSet)
+#router.register(r'blood-donors', DonorRegistryViewSet)
+#router.register(r'blood-donations', BloodDonationViewSet)
+#router.register(r'transfer-logs', TransferLogViewSet)
+router.register(r'sos-requests', SOSRequestViewSet)
+router.register(r'volunteer-donors', VolunteerDonorViewSet)
+router.register(r'notifications', NotificationViewSet) 
 urlpatterns = [
     # 2. Router ki saari URLs ko yahan include karein
     path('', include(router.urls)), 

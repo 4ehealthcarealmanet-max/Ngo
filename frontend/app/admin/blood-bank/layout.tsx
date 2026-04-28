@@ -1,81 +1,37 @@
 "use client";
 import React from "react";
-import { 
-  LayoutDashboard, Database, Truck, Users, History, ArrowLeft, Droplet 
-} from 'lucide-react';
+import { Droplet, Radio, Map, Activity, History, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export default function BloodBankLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-
   const navLinks = [
-    { name: 'Command Center', href: '/admin/blood-bank', icon: LayoutDashboard },
-    { name: 'Stock Inventory', href: '/admin/blood-bank/inventory', icon: Database },
-    { name: 'Live Tracking', href: '/admin/blood-bank/tracking', icon: Truck },
-    { name: 'Donor Registry', href: '/admin/blood-bank/donors', icon: Users },
-    { name: 'Transfer Logs', href: '/admin/blood-bank/logs', icon: History },
+    { name: 'SOS Radar', href: '/admin/blood-bank', icon: Radio },
+    { name: 'Donor Map', href: '/admin/blood-bank/map', icon: Map },
+    { name: 'Live Tracking', href: '/admin/blood-bank/tracking', icon: Activity },
+    { name: 'Match History', href: '/admin/blood-bank/history', icon: History },
   ];
 
   return (
-    <div className="flex h-screen bg-[#f8fafc]">
-      
-      {/* Sidebar - Matching MedBridge Theme */}
-      <aside className="w-[280px] bg-white border-r border-slate-100 flex flex-col">
-        
-        {/* Branding Area */}
-        <div className="p-6 border-b border-slate-50">
-          <div className="flex items-center gap-3">
-             <div className="p-2 bg-blue-50 rounded-lg">
-                <Droplet className="text-blue-600" size={20} />
-             </div>
-             <div>
-                <h2 className="text-sm font-bold text-slate-800 tracking-tight">BLOOD HUB</h2>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Operations</p>
-             </div>
-          </div>
+    <div className="flex h-screen bg-[#F8FAFC]">
+      <aside className="w-[280px] bg-white border-r border-slate-200 flex flex-col p-6">
+        <div className="flex items-center gap-3 mb-10 px-2">
+          <div className="bg-rose-600 p-2 rounded-xl shadow-lg shadow-rose-200"><Droplet className="text-white" fill="currentColor" size={24} /></div>
+          <div><h2 className="text-xl font-[1000] text-slate-900 tracking-tighter uppercase">Blood Hub</h2><p className="text-[10px] font-black text-rose-500 uppercase tracking-widest italic">Emergency Connect</p></div>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link 
-                key={link.href} 
-                href={link.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  isActive 
-                  ? 'bg-blue-50 text-blue-600 shadow-sm border-l-4 border-blue-600' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <link.icon size={18} strokeWidth={isActive ? 2 : 1.5} />
-                {link.name}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-1.5">
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href} className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-black text-sm transition-all ${pathname === link.href ? 'bg-rose-600 text-white shadow-xl shadow-rose-200' : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'}`}>
+              <link.icon size={20} />{link.name}
+            </Link>
+          ))}
         </nav>
-
-        {/* Back to Main Admin */}
-        <div className="p-4 border-t border-slate-50">
-          <Link 
-            href="/admin" 
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 transition-all"
-          >
-            <ArrowLeft size={18} />
-            <span className="text-sm font-medium">Back to Admin</span>
-          </Link>
+        <div className="pt-6 border-t border-slate-100">
+          <Link href="/admin" className="flex items-center gap-3 px-4 py-3 text-slate-500 font-bold hover:text-slate-900 text-xs italic"><ArrowLeft size={18} /> Exit to Main Admin</Link>
         </div>
       </aside>
-
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="min-h-full">
-          {children}
-        </div>
-      </main>
-
+      <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   );
 }

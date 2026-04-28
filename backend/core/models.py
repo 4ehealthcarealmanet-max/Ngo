@@ -201,177 +201,67 @@ class WorkshopRegistration(models.Model):
         return f"{self.full_name} registered for {self.workshop.title}"
 
 
-class Donor(models.Model):
-    TYPE_INDIVIDUAL = "individual"
-    TYPE_CORPORATE = "corporate"
-
-    TYPE_CHOICES = [
-        (TYPE_INDIVIDUAL, "Individual"),
-        (TYPE_CORPORATE, "Corporate"),
-    ]
-
-    name = models.CharField(max_length=200)
-    email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=20, blank=True)
-    donor_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_INDIVIDUAL)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "NGO_Donors"
-        verbose_name = "NGO Donor"
-        verbose_name_plural = "NGO Donors"
-
-    def __str__(self):
-        return self.name
 
 
-class Donation(models.Model):
-    PURPOSE_WORKSHOP = "workshop"
-    PURPOSE_NGO_SUPPORT = "ngo_support"
-
-    PURPOSE_CHOICES = [
-        (PURPOSE_WORKSHOP, "Workshop"),
-        (PURPOSE_NGO_SUPPORT, "NGO Support"),
-    ]
-
-    TYPE_ONE_TIME = "one_time"
-    TYPE_MONTHLY = "monthly"
-
-    DONATION_TYPE_CHOICES = [
-        (TYPE_ONE_TIME, "One-time"),
-        (TYPE_MONTHLY, "Monthly"),
-    ]
-
-    donor = models.ForeignKey(Donor, on_delete=models.CASCADE, related_name="donations")
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    date = models.DateTimeField(default=timezone.now)
-    transaction_id = models.CharField(max_length=80, blank=True)
-    donation_type = models.CharField(max_length=20, choices=DONATION_TYPE_CHOICES, default=TYPE_ONE_TIME)
-    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default=PURPOSE_WORKSHOP)
-    ngo = models.ForeignKey(NGOProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name="donations")
-    workshop = models.ForeignKey(Workshop, on_delete=models.SET_NULL, null=True, blank=True, related_name="donations")
-    notes = models.TextField(blank=True)
-
-    class Meta:
-        db_table = "NGO_Donations"
-        verbose_name = "NGO Donation"
-        verbose_name_plural = "NGO Donations"
-        ordering = ["-date"]
-
-    def __str__(self):
-        return f"{self.donor.name} - {self.amount}"
-
-
-class BloodStock(models.Model):
+# 1. Volunteer Donors (Naya simplified model)
+class VolunteerDonor(models.Model):
     BLOOD_GROUPS = [
         ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'),
-        ('O+', 'O+'), ('O-', 'O-'), ('AB+', 'AB+'), ('AB-', 'AB-'),
+        ('AB+', 'AB+'), ('AB-', 'AB-'), ('O+', 'O+'), ('O-', 'O-'),
     ]
-    blood_group = models.CharField(max_length=5, choices=BLOOD_GROUPS, unique=True)
-    units_available = models.PositiveIntegerField(default=0)
-    total_donated = models.PositiveIntegerField(default=0)
-    last_updated = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.blood_group} ({self.units_available} Units)"
-
-
-class DonorRegistry(models.Model):
-    STATUS_AVAILABLE = "Available"
-    STATUS_PENDING = "Pending"
-
-    STATUS_CHOICES = [
-        (STATUS_AVAILABLE, "Available"),
-        (STATUS_PENDING, "Pending"),
-    ]
-
-    name = models.CharField(max_length=200)
-    blood_group = models.CharField(max_length=5, choices=BloodStock.BLOOD_GROUPS)
-    contact = models.CharField(max_length=40, blank=True, default="")
-    last_donation_date = models.DateField(null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "NGO_DonorRegistry"
-        verbose_name = "Blood Donor"
-        verbose_name_plural = "Blood Donors"
-        ordering = ["name"]
+    name = models.CharField(max_length=100)
+    blood_group = models.CharField(max_length=5, choices=BLOOD_GROUPS)
+    phone = models.CharField(max_length=15)
+    city = models.CharField(max_length=100, default="Global")
+    is_available = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.name} ({self.blood_group})"
 
-
-class BloodDonation(models.Model):
-    donor = models.ForeignKey(DonorRegistry, on_delete=models.CASCADE, related_name="donations")
-    blood_group = models.CharField(max_length=5, choices=BloodStock.BLOOD_GROUPS)
-    units_donated = models.PositiveIntegerField()
-    donated_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        db_table = "NGO_BloodDonations"
-        verbose_name = "Blood Donation"
-        verbose_name_plural = "Blood Donations"
-        ordering = ["-donated_at"]
-
-    def __str__(self):
-        return f"{self.donor.name} - {self.blood_group} ({self.units_donated})"
-
-
-class TransferLog(models.Model):
-    STATUS_REQUEST_RECEIVED = "Request Received"
-    STATUS_DISPATCHED = "Dispatched"
-    STATUS_IN_TRANSIT = "In Transit"
-    STATUS_DELIVERED = "Delivered"
-
-    STATUS_CHOICES = [
-        (STATUS_REQUEST_RECEIVED, "Request Received"),
-        (STATUS_DISPATCHED, "Dispatched"),
-        (STATUS_IN_TRANSIT, "In Transit"),
-        (STATUS_DELIVERED, "Delivered"),
-    ]
-
-    units_transferred = models.PositiveIntegerField()
-    destination_hospital = models.CharField(max_length=255)
-    blood_group = models.CharField(max_length=5, choices=BloodStock.BLOOD_GROUPS)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_REQUEST_RECEIVED)
-
-    # Optional tracking fields (for map preview)
-    current_lat = models.FloatField(null=True, blank=True)
-    current_lng = models.FloatField(null=True, blank=True)
-    rider_contact = models.CharField(max_length=20, blank=True, default="")
-
-    class Meta:
-        db_table = "NGO_TransferLogs"
-        verbose_name = "Transfer Log"
-        verbose_name_plural = "Transfer Logs"
-        ordering = ["-timestamp"]
-
-    def __str__(self):
-        return f"{self.destination_hospital} - {self.blood_group} ({self.units_transferred})"
-
-
-class BloodRequest(models.Model):
+# 2. Emergency SOS Requests (Hospital se aane wali requests)
+class EmergencyRequest(models.Model):
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
-        ('Approved', 'Approved'),
-        ('Dispatched', 'Dispatched'),
-        ('Delivered', 'Delivered'),
+        ('Broadcasting', 'Broadcasting'),
+        ('Matched', 'Matched'),
+        ('Completed', 'Completed'),
     ]
-    patient_name = models.CharField(max_length=150)
     hospital_name = models.CharField(max_length=200)
+    patient_name = models.CharField(max_length=100)
     blood_group = models.CharField(max_length=5)
-    units_required = models.PositiveIntegerField()
-    urgency_level = models.CharField(max_length=20, default='Normal') # Urgent, Normal
+    units_required = models.IntegerField(default=1)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
-    
-    # Tracking Fields
-    current_lat = models.FloatField(null=True, blank=True)
-    current_lng = models.FloatField(null=True, blank=True)
-    rider_contact = models.CharField(max_length=15, null=True, blank=True)
-    
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.patient_name} - {self.blood_group}"
+        return f"Emergency: {self.blood_group} for {self.hospital_name}"
+
+class SOSRequest(models.Model):
+    hospital_name = models.CharField(max_length=255)
+    patient_name = models.CharField(max_length=255, default="Unknown") # Ye field zaroori hai
+    blood_group = models.CharField(max_length=10) # Iske bina matching nahi hogi
+    units_required = models.IntegerField(default=1)
+    status = models.CharField(max_length=20, default='Pending') # Pending/Broadcasting
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Ye function zaroori hai taaki Admin dropdown mein naam dikhe
+    def __str__(self):
+        return f"{self.patient_name} - {self.blood_group} ({self.hospital_name})"
+        
+# core/models.py mein ye class add karein
+class Notification(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Accepted', 'Accepted'),
+        ('Rejected', 'Rejected'),
+    ]
+    donor = models.ForeignKey(VolunteerDonor, on_delete=models.CASCADE)
+    sos_request = models.ForeignKey(SOSRequest, on_delete=models.CASCADE)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    distance_km = models.FloatField(default=0.0)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Alert for {self.donor.name} - {self.sos_request.hospital_name}"

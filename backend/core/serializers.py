@@ -3,20 +3,25 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .models import (
-    BloodDonation,
-    BloodStock,
+    #BloodDonation,
+    #BloodStock,
     Hospital,
-    Donation,
-    Donor,
-    DonorRegistry,
+    #Donation,
+    #Donor,
+    #DonorRegistry,
     NGOProfile,
     PatientProfile,
     Referral,
     ReferralNetwork,
     ReferralStatusUpdate,
-    TransferLog,
+    #TransferLog,
     Workshop,
     WorkshopRegistration,
+    VolunteerDonor,
+    #EmergencyRequest,
+    SOSRequest,
+    Notification
+    
 )
 
 
@@ -64,48 +69,6 @@ class WorkshopSerializer(serializers.ModelSerializer):
             data["image_url"] = "/AdolescentMentalHealth.png"
 
         return data
-
-
-class DonorSerializer(serializers.ModelSerializer):
-    total_donated = serializers.SerializerMethodField()
-    last_donation_date = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Donor
-        fields = [
-            "id",
-            "name",
-            "email",
-            "phone",
-            "donor_type",
-            "created_at",
-            "total_donated",
-            "last_donation_date",
-        ]
-
-    def get_total_donated(self, obj: Donor):
-        total = obj.donations.aggregate(total=Sum("amount")).get("total")
-        return total
-
-    def get_last_donation_date(self, obj: Donor):
-        last = obj.donations.order_by("-date").values_list("date", flat=True).first()
-        return last
-
-
-class DonorMiniSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Donor
-        fields = ["id", "name", "email", "donor_type"]
-
-
-class DonationSerializer(serializers.ModelSerializer):
-    donor_details = DonorMiniSerializer(source="donor", read_only=True)
-    workshop_details = WorkshopSerializer(source="workshop", read_only=True)
-    ngo_details = NGOProfileSerializer(source="ngo", read_only=True)
-
-    class Meta:
-        model = Donation
-        fields = "__all__"
 
 
 class HospitalSerializer(serializers.ModelSerializer):
@@ -218,101 +181,27 @@ class WorkshopRegistrationSerializer(serializers.ModelSerializer):
             return None
 
 
-class BloodStockSerializer(serializers.ModelSerializer):
+class VolunteerDonorSerializer(serializers.ModelSerializer):
     class Meta:
-        model = BloodStock
-        fields = ["id", "blood_group", "units_available", "total_donated", "last_updated"]
-        read_only_fields = ["id", "last_updated"]
+        model = VolunteerDonor
+        fields = '__all__'
 
+#class EmergencyRequestSerializer(serializers.ModelSerializer):
+ #   class Meta:
+      #  model = EmergencyRequest
+       # fields = '__all__'
 
-class DonorRegistrySerializer(serializers.ModelSerializer):
+class SOSRequestSerializer(serializers.ModelSerializer):
     class Meta:
-        model = DonorRegistry
-        fields = [
-            "id",
-            "name",
-            "blood_group",
-            "contact",
-            "last_donation_date",
-            "status",
-            "created_at",
-        ]
-        read_only_fields = ["id", "created_at"]
+        model = SOSRequest
+        fields = '__all__'
 
-    def to_representation(self, instance: DonorRegistry):
-        data = super().to_representation(instance)
-        request = self.context.get("request")
-        is_admin = bool(getattr(request, "user", None) and request.user.is_authenticated and request.user.is_staff)
-        if not is_admin:
-            data["contact"] = None
-        return data
+class NotificationSerializer(serializers.ModelSerializer):
+    # In lines se donor ka naam aur phone number bhi API mein dikhne lagega
+    donor_name = serializers.ReadOnlyField(source='donor.name')
+    #donor_phone = serializers.ReadOnlyField(source='donor.phone')
+    hospital_name = serializers.ReadOnlyField(source='sos_request.hospital_name')
 
-
-class BloodDonationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = BloodDonation
-        fields = ["id", "donor", "blood_group", "units_donated", "donated_at"]
-        read_only_fields = ["id"]
-
-    def validate_units_donated(self, value: int):
-        if value <= 0:
-            raise serializers.ValidationError("units_donated must be greater than 0.")
-        return value
-
-    @transaction.atomic
-    def create(self, validated_data):
-        donor: DonorRegistry = validated_data["donor"]
-        blood_group = (validated_data.get("blood_group") or donor.blood_group).strip()
-        units = validated_data["units_donated"]
-
-        validated_data["blood_group"] = blood_group
-
-        stock, _ = BloodStock.objects.select_for_update().get_or_create(blood_group=blood_group)
-        stock.units_available += units
-        stock.total_donated += units
-        stock.save(update_fields=["units_available", "total_donated", "last_updated"])
-
-        donation: BloodDonation = super().create(validated_data)
-
-        donor.last_donation_date = donation.donated_at.date()
-        donor.save(update_fields=["last_donation_date"])
-
-        return donation
-
-
-class TransferLogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TransferLog
-        fields = [
-            "id",
-            "units_transferred",
-            "destination_hospital",
-            "blood_group",
-            "timestamp",
-            "status",
-            "current_lat",
-            "current_lng",
-            "rider_contact",
-        ]
-        read_only_fields = ["id", "timestamp"]
-
-    def validate_units_transferred(self, value: int):
-        if value <= 0:
-            raise serializers.ValidationError("units_transferred must be greater than 0.")
-        return value
-
-    @transaction.atomic
-    def create(self, validated_data):
-        blood_group = (validated_data.get("blood_group") or "").strip()
-        units = validated_data["units_transferred"]
-
-        stock, _ = BloodStock.objects.select_for_update().get_or_create(blood_group=blood_group)
-        if stock.units_available < units:
-            raise serializers.ValidationError(
-                {"units_transferred": f"Insufficient stock for {blood_group}. Available: {stock.units_available}."}
-            )
-
-        stock.units_available -= units
-        stock.save(update_fields=["units_available", "last_updated"])
-
-        return super().create(validated_data)
+        model = Notification
+        fields = '__all__'
