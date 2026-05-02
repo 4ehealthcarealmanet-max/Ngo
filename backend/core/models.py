@@ -255,8 +255,8 @@ class Notification(models.Model):
         ('Accepted', 'Accepted'),
         ('Rejected', 'Rejected'),
     ]
-    donor = models.ForeignKey(VolunteerDonor, on_delete=models.CASCADE)
-    sos_request = models.ForeignKey(SOSRequest, on_delete=models.CASCADE)
+    donor = models.ForeignKey('VolunteerDonor', on_delete=models.CASCADE) 
+    sos_request = models.ForeignKey('SOSRequest', on_delete=models.CASCADE)
     message = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     distance_km = models.FloatField(default=0.0)
