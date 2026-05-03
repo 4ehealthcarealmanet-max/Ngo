@@ -8,6 +8,7 @@ from rest_framework import viewsets
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
+from django.db.models import Sum, Count
 from .models import (
     #BloodDonation,
     #BloodStock,
@@ -21,7 +22,9 @@ from .models import (
     #EmergencyRequest, 
     VolunteerDonor,
     SOSRequest,
-    Notification
+    Notification,
+    BloodMatch,
+    ActivityLog
 )  # Ye import check kar lena
 from .serializers import (
     #BloodDonationSerializer,
@@ -36,7 +39,8 @@ from .serializers import (
     #EmergencyRequestSerializer,
     VolunteerDonorSerializer,
     SOSRequestSerializer,
-    NotificationSerializer
+    NotificationSerializer,
+    BloodMatchSerializer
 ) 
 
 from .models import NGOProfile, PatientProfile, ReferralNetwork, Workshop
@@ -265,3 +269,86 @@ class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
 
 
+class BloodMatchListAPI(APIView):
+    def get(self, request):
+        matches = BloodMatch.objects.all().order_by('-created_at')
+        match_serializer = BloodMatchSerializer(matches, many=True)
+        
+        # Match table ki ID ko 'match-1' jaisa banayein
+        for item in match_serializer.data:
+            item['id'] = f"match-{item['id']}"
+            
+        volunteers = VolunteerDonor.objects.filter(status='Completed')
+        volunteer_serializer = VolunteerDonorSerializer(volunteers, many=True)
+        
+        # Volunteer table ki ID ko 'vol-1' jaisa banayein
+        for item in volunteer_serializer.data:
+            item['id'] = f"vol-{item['id']}"
+            
+        combined_data = match_serializer.data + volunteer_serializer.data
+        return Response(combined_data)
+
+    # Pseudo-logic for your View
+    def complete_donation(request, match_id):
+        # 1. Match record ko fetch karein
+        match = BloodMatch.objects.get(id=match_id)
+        
+        # 2. Process complete karein
+        match.status = 'Completed'
+        match.save()
+        
+        # 3. Ye record ab automatic "Match History" API mein dikhne lagega
+        return Response({"message": "Donation successful and history updated!"})
+
+class DashboardStatsAPI(APIView):
+    def get(self, request):
+        # Database se real data nikalna
+        total_donors = VolunteerDonor.objects.count()
+        lives_saved = VolunteerDonor.objects.filter(status='Completed').count()
+        # Units ka sum nikalna (agar field ka naam 'units' hai)
+        total_units = VolunteerDonor.objects.aggregate(Sum('units'))['units__sum'] or 0
+        
+        data = {
+            "lives_saved": lives_saved,
+            "success_rate": "98.2%", # Ise filhal static rakh sakte hain
+            "total_donors": total_donors,
+            "units_traded": f"{total_units}"
+        }
+        return Response(data)
+
+# core/views.py mein match history ya tracking ke liye
+class LiveTrackingAPI(APIView):
+    def get(self, request):
+        # Sirf unhe uthao jo "In Transit" hain
+        active_transits = VolunteerDonor.objects.filter(status='In Transit')
+        
+        # Inhe JSON format mein convert karein
+        data = []
+        for item in active_transits:
+            data.append({
+                "id": item.id,
+                "reference_id": f"VOL-{item.id}", # Static ki jagah dynamic ID
+                #"donor_name": item.donor_name,
+                "donor_name": getattr(item, 'name', 'Unknown Donor'),
+                "hospital_name": item.hospital_name,
+                "blood_group": item.blood_group,
+                "units": item.units,
+                "status": item.status
+            })
+        return Response(data)
+
+class MissionLogsAPI(APIView):
+    def get(self, request):
+        logs = ActivityLog.objects.all()[:5] # Sirf latest 5 logs dikhayenge
+        data = [{
+            "id": log.id,
+            "message": log.message,
+            "time": log.created_at.strftime("%I:%M %p") # Example: 10:30 PM
+        } for log in logs]
+        return Response(data)
+
+# core/views.py
+
+class LiveTrackingAPI(generics.ListAPIView):
+    queryset = VolunteerDonor.objects.all()
+    serializer_class = VolunteerDonorSerializer

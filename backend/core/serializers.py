@@ -1,6 +1,7 @@
 from django.db.models import Sum
 from django.db import transaction
 from rest_framework import serializers
+from rest_framework import generics
 
 from .models import (
     #BloodDonation,
@@ -20,7 +21,8 @@ from .models import (
     VolunteerDonor,
     #EmergencyRequest,
     SOSRequest,
-    Notification
+    Notification,
+    BloodMatch
     
 )
 
@@ -180,16 +182,42 @@ class WorkshopRegistrationSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
-
 class VolunteerDonorSerializer(serializers.ModelSerializer):
+    # Match History table ke liye
+    donor_name = serializers.CharField(source='name', read_only=True)
+    
+    # Proximity Volunteers card ke liye (Wapas add karein)
+    name = serializers.CharField()
+    
+    reference_id = serializers.SerializerMethodField()
+    hospital_name = serializers.SerializerMethodField()
+    units = serializers.SerializerMethodField()
+    volume = serializers.SerializerMethodField()
+
     class Meta:
         model = VolunteerDonor
-        fields = '__all__'
+        # 'name' ko fields list mein shamil rakhein
+        fields = [
+            'id', 'name', 'reference_id', 'donor_name', 
+            'blood_group', 'hospital_name', 'units', 'volume', 'status'
+        ]
 
-#class EmergencyRequestSerializer(serializers.ModelSerializer):
- #   class Meta:
-      #  model = EmergencyRequest
-       # fields = '__all__'
+    def get_reference_id(self, obj):
+        return f"VOL-{obj.id}"
+
+    def get_hospital_name(self, obj):
+        return getattr(obj, 'hospital_name', f"{obj.city} Hospital")
+
+    def get_units(self, obj):
+        # Yahan sirf number return karein
+        return getattr(obj, 'units', 1) 
+
+    def get_volume(self, obj):
+        # Match History ke Units column ke liye
+        return getattr(obj, 'units', 1)
+
+    
+
 
 class SOSRequestSerializer(serializers.ModelSerializer):
     class Meta:
@@ -205,3 +233,13 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = '__all__'
+
+class BloodMatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BloodMatch
+        fields = '__all__'
+
+class LiveTrackingAPI(generics.ListAPIView):
+    # Ensure karein ki ye sahi model se data la raha h
+    queryset = VolunteerDonor.objects.all() 
+    serializer_class = VolunteerDonorSerializer

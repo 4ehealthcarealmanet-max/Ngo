@@ -19,7 +19,9 @@ from .models import (
     VolunteerDonor,
     #EmergencyRequest,
     Notification,
-    SOSRequest
+    SOSRequest,
+    BloodMatch,
+    ActivityLog
 )
 
 @admin.register(NGOProfile)
@@ -88,3 +90,10 @@ class SOSRequestAdmin(admin.ModelAdmin):
     list_filter = ('status', 'blood_group')
 
 admin.site.register(Notification)
+
+admin.site.register(BloodMatch)
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    list_display = ('message', 'created_at')
+    list_filter = ('created_at',)

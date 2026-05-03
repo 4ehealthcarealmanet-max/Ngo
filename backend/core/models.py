@@ -2,8 +2,8 @@ import secrets
 
 from django.db import models
 from django.utils import timezone
-
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 def generate_referral_id():
     # Example: REF-20260331-1A2B3C
     return f"REF-{timezone.now():%Y%m%d}-{secrets.token_hex(3).upper()}"
@@ -214,7 +214,15 @@ class VolunteerDonor(models.Model):
     phone = models.CharField(max_length=15)
     city = models.CharField(max_length=100, default="Global")
     is_available = models.BooleanField(default=True)
-
+    hospital_name = models.CharField(max_length=200, blank=True, null=True, default="City Hospital")
+    units = models.IntegerField(default=1) # Taaki aap backend se number daal sakein
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('In Transit', 'In Transit'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     def __str__(self):
         return f"{self.name} ({self.blood_group})"
 
@@ -265,3 +273,55 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Alert for {self.donor.name} - {self.sos_request.hospital_name}"
+
+
+
+class BloodMatch(models.Model):
+    STATUS_CHOICES = [
+        ('Completed', 'Completed'),
+        ('In Transit', 'In Transit'),
+        ('Cancelled', 'Cancelled'),
+    ]
+
+    reference_id = models.CharField(max_length=20, unique=True)
+    donor_name = models.CharField(max_length=100)
+    blood_group = models.CharField(max_length=5)
+    hospital_name = models.CharField(max_length=200)
+    units = models.IntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Completed')
+    location = models.CharField(max_length=255)
+    contact = models.CharField(max_length=15)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __clstr__(self):
+        return self.reference_id
+
+class ActivityLog(models.Model):
+    message = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at'] # Latest log sabse upar dikhega
+
+    def __str__(self):
+        return self.message
+
+@receiver(post_save, sender=VolunteerDonor)
+def donor_activity_log(sender, instance, created, **kwargs):
+    if created:
+        ActivityLog.objects.create(message=f"New Donor Registered: {instance.name}")
+    else:
+        ActivityLog.objects.create(message=f"Mission Update: {instance.name} is now {instance.status}")
+
+# 2. Jab koi SOS Request aaye
+@receiver(post_save, sender=SOSRequest)
+def sos_activity_log(sender, instance, created, **kwargs):
+    if created:
+        # SOS hamesha critical hota hai
+        ActivityLog.objects.create(message=f"🚨 EMERGENCY: New SOS from {instance.hospital_name}!")
+
+# 3. Jab Blood Match confirm ho (Tracking shuru hone se pehle)
+@receiver(post_save, sender=BloodMatch)
+def match_activity_log(sender, instance, created, **kwargs):
+    if created:
+        ActivityLog.objects.create(message=f"Match Found: {instance.blood_group} for {instance.patient_name}")
