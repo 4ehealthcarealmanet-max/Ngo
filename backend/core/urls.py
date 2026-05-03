@@ -15,25 +15,31 @@ from .views import (
     VolunteerDonor,
     #EmergencyRequest,
     SOSRequestViewSet,
-    NotificationViewSet
+    NotificationViewSet,
+    BloodMatchListAPI,
+    DashboardStatsAPI,
+    LiveTrackingAPI,
+    MissionLogsAPI
 )
 
 # 1. Router setup karein ViewSets ke liye
 router = DefaultRouter()
 router.register(r'ngos', NGOProfileViewSet)
-#router.register(r'donors', DonorViewSet)
-#router.register(r'donations', DonationViewSet)
 router.register(r'registrations', WorkshopRegistrationViewSet)
 router.register(r'hospitals', HospitalViewSet)
 router.register(r'referrals', ReferralViewSet)
-#router.register(r'blood-stocks', BloodStockViewSet)
-#router.register(r'blood-donors', DonorRegistryViewSet)
-#router.register(r'blood-donations', BloodDonationViewSet)
-#router.register(r'transfer-logs', TransferLogViewSet)
 router.register(r'sos-requests', SOSRequestViewSet)
 router.register(r'volunteer-donors', VolunteerDonorViewSet)
 router.register(r'notifications', NotificationViewSet) 
 urlpatterns = [
     # 2. Router ki saari URLs ko yahan include karein
     path('', include(router.urls)), 
+
+    path('blood-bank/matches/', BloodMatchListAPI.as_view(), name='match-history'),
+
+    path('dashboard-stats/', DashboardStatsAPI.as_view(), name='dashboard-stats'),
+
+    path('live-tracking/', LiveTrackingAPI.as_view(), name='live-tracking'),
+
+    path('mission-logs/', MissionLogsAPI.as_view(), name='mission-logs')
 ]
