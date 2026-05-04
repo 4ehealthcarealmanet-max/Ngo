@@ -73,14 +73,15 @@ export default function DonorMap() {
             <div 
               key={donor.id} 
               onClick={() => {
-                if (donor.lat && donor.lng) {
-                  setMapCenter([donor.lat, donor.lng]);
-                } else if (donor.city.toLowerCase() === 'dewas') {
-                  setMapCenter([22.9623, 76.0508]); // Dewas Coordinates
-                } else {
-                  setMapCenter([22.7196, 75.8577]); // Indore Fallback
-                }
-              }}
+              if (donor.lat && donor.lng) {
+                // String ko float number mein convert karna zaroori hai
+                const newLat = parseFloat(donor.lat);
+                const newLng = parseFloat(donor.lng);
+                setMapCenter([newLat, newLng]);
+              } else {
+                setMapCenter([22.7196, 75.8577]); // Indore Fallback
+              }
+            }}
               className="p-4 bg-slate-50 border border-transparent rounded-2xl hover:border-blue-200 hover:bg-white hover:shadow-md transition-all cursor-pointer group"
             >
               <div className="flex justify-between items-start">

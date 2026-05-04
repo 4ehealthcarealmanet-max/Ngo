@@ -203,7 +203,6 @@ class WorkshopRegistration(models.Model):
 
 
 
-# 1. Volunteer Donors (Naya simplified model)
 class VolunteerDonor(models.Model):
     BLOOD_GROUPS = [
         ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'),
@@ -214,8 +213,15 @@ class VolunteerDonor(models.Model):
     phone = models.CharField(max_length=15)
     city = models.CharField(max_length=100, default="Global")
     is_available = models.BooleanField(default=True)
+    
+    # --- YEH DO LINES ADD KARNI HAIN ---
+    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    # ----------------------------------
+
     hospital_name = models.CharField(max_length=200, blank=True, null=True, default="City Hospital")
-    units = models.IntegerField(default=1) # Taaki aap backend se number daal sakein
+    units = models.IntegerField(default=1)
+    
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
         ('In Transit', 'In Transit'),
@@ -223,6 +229,7 @@ class VolunteerDonor(models.Model):
         ('Cancelled', 'Cancelled'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+
     def __str__(self):
         return f"{self.name} ({self.blood_group})"
 

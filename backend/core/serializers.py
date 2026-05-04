@@ -186,7 +186,7 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
     # Match History table ke liye
     donor_name = serializers.CharField(source='name', read_only=True)
     
-    # Proximity Volunteers card ke liye (Wapas add karein)
+    # Proximity Volunteers card ke liye
     name = serializers.CharField()
     
     reference_id = serializers.SerializerMethodField()
@@ -196,10 +196,11 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VolunteerDonor
-        # 'name' ko fields list mein shamil rakhein
+        # 'lat' aur 'lng' ko shamil karna zaroori hai taaki map move kar sake
         fields = [
             'id', 'name', 'reference_id', 'donor_name', 
-            'blood_group', 'hospital_name', 'units', 'volume', 'status'
+            'blood_group', 'hospital_name', 'units', 'volume', 
+            'status', 'city', 'lat', 'lng', 'is_available'
         ]
 
     def get_reference_id(self, obj):
@@ -209,14 +210,10 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
         return getattr(obj, 'hospital_name', f"{obj.city} Hospital")
 
     def get_units(self, obj):
-        # Yahan sirf number return karein
         return getattr(obj, 'units', 1) 
 
     def get_volume(self, obj):
-        # Match History ke Units column ke liye
         return getattr(obj, 'units', 1)
-
-    
 
 
 class SOSRequestSerializer(serializers.ModelSerializer):
