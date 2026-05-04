@@ -252,10 +252,19 @@ class EmergencyRequest(models.Model):
         return f"Emergency: {self.blood_group} for {self.hospital_name}"
 
 class SOSRequest(models.Model):
+    URGENCY_NORMAL = "Normal"
+    URGENCY_CRITICAL = "Critical"
+
+    URGENCY_CHOICES = [
+        (URGENCY_NORMAL, "Normal"),
+        (URGENCY_CRITICAL, "Critical"),
+    ]
+
     hospital_name = models.CharField(max_length=255)
     patient_name = models.CharField(max_length=255, default="Unknown") # Ye field zaroori hai
     blood_group = models.CharField(max_length=10) # Iske bina matching nahi hogi
     units_required = models.IntegerField(default=1)
+    urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default=URGENCY_NORMAL)
     status = models.CharField(max_length=20, default='Pending') # Pending/Broadcasting
     created_at = models.DateTimeField(auto_now_add=True)
 
