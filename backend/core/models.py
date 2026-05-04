@@ -229,9 +229,16 @@ class VolunteerDonor(models.Model):
         ('Cancelled', 'Cancelled'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    mission_started_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.blood_group})"
+
+    def save(self, *args, **kwargs):
+        # Mark mission start time the first time donor goes "In Transit"
+        if self.status == "In Transit" and self.mission_started_at is None:
+            self.mission_started_at = timezone.now()
+        super().save(*args, **kwargs)
 
 # 2. Emergency SOS Requests (Hospital se aane wali requests)
 class EmergencyRequest(models.Model):

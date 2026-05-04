@@ -325,25 +325,36 @@ class LiveTrackingAPI(APIView):
         # Inhe JSON format mein convert karein
         data = []
         for item in active_transits:
+            hospital_contact = None
+            try:
+                hospital = Hospital.objects.filter(name__iexact=item.hospital_name).only("contact").first()
+                hospital_contact = getattr(hospital, "contact", None) if hospital else None
+            except Exception:
+                hospital_contact = None
+
             data.append({
                 "id": item.id,
                 "reference_id": f"VOL-{item.id}", # Static ki jagah dynamic ID
                 #"donor_name": item.donor_name,
                 "donor_name": getattr(item, 'name', 'Unknown Donor'),
+                "donor_phone": getattr(item, "phone", None),
                 "hospital_name": item.hospital_name,
+                "hospital_helpline": hospital_contact,
                 "blood_group": item.blood_group,
                 "units": item.units,
-                "status": item.status
+                "status": item.status,
+                "mission_started_at": item.mission_started_at.isoformat() if item.mission_started_at else None,
             })
         return Response(data)
 
 class MissionLogsAPI(APIView):
     def get(self, request):
-        logs = ActivityLog.objects.all()[:5] # Sirf latest 5 logs dikhayenge
+        logs = ActivityLog.objects.order_by("-created_at")[:5] # Sirf latest 5 logs dikhayenge
         data = [{
             "id": log.id,
             "message": log.message,
-            "time": log.created_at.strftime("%I:%M %p") # Example: 10:30 PM
+            "time": log.created_at.strftime("%I:%M %p"), # Example: 10:30 PM
+            "created_at": log.created_at.isoformat(),
         } for log in logs]
         return Response(data)
 
