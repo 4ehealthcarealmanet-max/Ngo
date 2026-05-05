@@ -9,6 +9,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from django.db.models import Sum, Count
+from django.http import JsonResponse
 from .models import (
     #BloodDonation,
     #BloodStock,
@@ -170,6 +171,12 @@ class WorkshopRegistrationViewSet(viewsets.ModelViewSet):
     queryset = WorkshopRegistration.objects.select_related("workshop").all().order_by("-registered_at")
     serializer_class = WorkshopRegistrationSerializer
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    @action(detail=True, methods=["post"], url_path="send-reminder")
+    def send_reminder(self, request, pk=None):
+        registration = self.get_object()
+        print(f"Sending reminder to {registration.full_name}")
+        return JsonResponse({"status": "success", "message": "Reminder sent simulation"})
 
 
 class HospitalViewSet(viewsets.ModelViewSet):

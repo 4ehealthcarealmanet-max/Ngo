@@ -601,7 +601,7 @@ type RegistrationDetailsModalProps = {
   onClose: () => void;
   onVerify: (registration: WorkshopRegistration) => Promise<boolean>;
   isVerifying: boolean;
-  onSendReminders: (workshopId: number, workshopTitle: string) => void;
+  onSendReminder: (registration: WorkshopRegistration, workshopTitle: string) => void;
   isSendingReminders: boolean;
 };
 
@@ -610,7 +610,7 @@ function RegistrationDetailsModal({
   onClose,
   onVerify,
   isVerifying,
-  onSendReminders,
+  onSendReminder,
   isSendingReminders,
 }: RegistrationDetailsModalProps) {
   const statusNormalized = (registration.status ?? "").toLowerCase();
@@ -734,11 +734,11 @@ function RegistrationDetailsModal({
             type="button"
             onClick={() => {
               const title = registration.workshop_details?.title ?? `Workshop #${registration.workshop}`;
-              onSendReminders(registration.workshop, title);
+              onSendReminder(registration, title);
             }}
             disabled={isSendingReminders}
             className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-black text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-60 disabled:hover:bg-emerald-50 inline-flex items-center justify-center gap-2"
-            title="Send reminders to all participants of this workshop"
+            title="Send reminder to this participant"
           >
             <Bell size={16} />
             {isSendingReminders ? "Sending..." : "Send Reminders"}
@@ -2835,6 +2835,34 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const sendIndividualReminder = async (registrationId: number, fullName: string, workshopTitle: string) => {
+    if (isSendingReminders) return;
+    try {
+      setIsSendingReminders(true);
+      const res = await fetch(apiUrl(`/api/registrations/${registrationId}/send-reminder/`), {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+
+      if (!res.ok) {
+        pushToast(`Failed to send reminder to ${fullName}.`, "error");
+        return;
+      }
+
+      pushToast(`Reminder sent to ${fullName}`, "success");
+      appendSystemLog({
+        tone: "success",
+        title: `Reminder sent to ${fullName}`,
+        detail: `Workshop: ${workshopTitle} • Sent via: SMS/Email Simulation.`,
+      });
+    } catch (error) {
+      console.error("Send individual reminder error:", error);
+      pushToast(`Failed to send reminder to ${fullName}.`, "error");
+    } finally {
+      setIsSendingReminders(false);
+    }
+  };
+
   const openNgoManagementFromAlert = () => {
     setActiveTab("ngo");
     pushToast("Opened NGO Management for verification review.", "info");
@@ -3624,8 +3652,8 @@ export default function AdminDashboardPage() {
             }
           }}
           isVerifying={isVerifyingDetails}
-          onSendReminders={(workshopId, title) => {
-            void sendWorkshopReminders(workshopId, title);
+          onSendReminder={(registration, title) => {
+            void sendIndividualReminder(registration.id, registration.full_name, title);
           }}
           isSendingReminders={isSendingReminders}
         />
