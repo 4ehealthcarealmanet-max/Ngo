@@ -20,7 +20,7 @@ export default function SOSControlRoom() {
       setRequests(res.data);
       const donorRes = await axios.get('http://127.0.0.1:8000/api/volunteer-donors/');
       setDonors(donorRes.data);
-      const notifRes = await axios.get('http://127.0.0.1:8000/api/notifications/');
+      const notifRes = await axios.get('http://127.0.0.1:8000/api/notifications/', { params: { status: 'Pending' } });
       setNotifications(notifRes.data);
       setLoading(false);
     } catch (error) {
@@ -158,7 +158,7 @@ export default function SOSControlRoom() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {notifications.filter(n => requests.find(r => r.id === n.sos_request)?.status === "Broadcasting").map((notif) => (
+                  {notifications.filter((n: any) => n?.status === 'Pending').map((notif: any) => (
                     <tr key={notif.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-5 pl-4 font-black text-slate-800 text-sm">{notif.donor_name}</td>
                       <td className="py-5 text-slate-500 font-bold text-xs italic">{notif.hospital_name}</td>

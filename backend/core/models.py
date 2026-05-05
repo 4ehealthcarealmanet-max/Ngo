@@ -2,7 +2,7 @@ import secrets
 
 from django.db import models
 from django.utils import timezone
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 def generate_referral_id():
     # Example: REF-20260331-1A2B3C
@@ -335,6 +335,37 @@ def donor_activity_log(sender, instance, created, **kwargs):
         ActivityLog.objects.create(message=f"New Donor Registered: {instance.name}")
     else:
         ActivityLog.objects.create(message=f"Mission Update: {instance.name} is now {instance.status}")
+
+
+@receiver(pre_save, sender=VolunteerDonor)
+def donor_status_sync_pre_save(sender, instance, **kwargs):
+    if not instance.pk:
+        instance._previous_status = None
+        return
+
+    instance._previous_status = (
+        VolunteerDonor.objects.filter(pk=instance.pk).values_list("status", flat=True).first()
+    )
+
+
+@receiver(post_save, sender=VolunteerDonor)
+def donor_notification_status_sync(sender, instance, created, **kwargs):
+    if created:
+        return
+
+    previous_status = getattr(instance, "_previous_status", None)
+    if previous_status == instance.status:
+        return
+
+    if instance.status == "In Transit":
+        latest_pending = (
+            Notification.objects.filter(donor=instance, status="Pending")
+            .order_by("-created_at")
+            .first()
+        )
+        if latest_pending:
+            latest_pending.status = "Accepted"
+            latest_pending.save(update_fields=["status"])
 
 # 2. Jab koi SOS Request aaye
 @receiver(post_save, sender=SOSRequest)

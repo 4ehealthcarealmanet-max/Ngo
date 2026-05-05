@@ -30,7 +30,8 @@ router.register(r'hospitals', HospitalViewSet)
 router.register(r'referrals', ReferralViewSet)
 router.register(r'sos-requests', SOSRequestViewSet)
 router.register(r'volunteer-donors', VolunteerDonorViewSet)
-router.register(r'notifications', NotificationViewSet) 
+# 'basename' add karne se error khatam ho jayega
+router.register(r'notifications', NotificationViewSet, basename='notification')
 urlpatterns = [
     # 2. Router ki saari URLs ko yahan include karein
     path('', include(router.urls)), 

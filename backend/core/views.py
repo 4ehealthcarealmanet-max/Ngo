@@ -272,8 +272,14 @@ class SOSRequestViewSet(viewsets.ModelViewSet):
             "message": "Broadcast cancelled and tracker cleared."
         })
 class NotificationViewSet(viewsets.ModelViewSet):
-    queryset = Notification.objects.all().order_by('-created_at')
     serializer_class = NotificationSerializer
+
+    def get_queryset(self):
+        qs = Notification.objects.all().order_by('-created_at')
+        status = self.request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
 
 
 class BloodMatchListAPI(APIView):
@@ -324,7 +330,7 @@ class DashboardStatsAPI(APIView):
         return Response(data)
 
 # core/views.py mein match history ya tracking ke liye
-class LiveTrackingAPI(APIView):
+class LiveTrackingDetailedAPI(APIView):
     def get(self, request):
         # Sirf unhe uthao jo "In Transit" hain
         active_transits = VolunteerDonor.objects.filter(status='In Transit')
@@ -368,5 +374,10 @@ class MissionLogsAPI(APIView):
 # core/views.py
 
 class LiveTrackingAPI(generics.ListAPIView):
-    queryset = VolunteerDonor.objects.all()
     serializer_class = VolunteerDonorSerializer
+
+    def get_queryset(self):
+        status = self.request.query_params.get('status')
+        if not status:
+            status = 'In Transit'
+        return VolunteerDonor.objects.filter(status=status)

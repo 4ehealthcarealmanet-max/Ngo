@@ -21,7 +21,7 @@ const LiveTracking = () => {
     // 1. Live Tracking Fetch karne ka logic
     const fetchLiveTracking = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/live-tracking/');
+        const response = await fetch('http://127.0.0.1:8000/api/live-tracking/?status=In%20Transit');
         const contentType = response.headers.get("content-type");
         
         if (!response.ok || !contentType || !contentType.includes("application/json")) {
@@ -134,7 +134,7 @@ const LiveTracking = () => {
       lastDeliveriesJson.current = "";
       lastLogsJson.current = "";
       const [liveRes, logsRes] = await Promise.all([
-        fetch('http://127.0.0.1:8000/api/live-tracking/'),
+        fetch('http://127.0.0.1:8000/api/live-tracking/?status=In%20Transit'),
         fetch('http://127.0.0.1:8000/api/mission-logs/'),
       ]);
       if (liveRes.ok) {
@@ -182,7 +182,7 @@ const LiveTracking = () => {
         {/* Left: Active Mission Cards */}
         <div className="xl:col-span-2 space-y-6">
           {activeDeliveries.length > 0 ? (
-            activeDeliveries.map((delivery) => (
+            activeDeliveries.filter((d: any) => d?.status === 'In Transit').map((delivery) => (
               <div key={delivery.id} className="bg-white rounded-[32px] border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.02)] overflow-hidden hover:border-blue-200 transition-all">
                 <div className="p-8">
                   {(() => {
