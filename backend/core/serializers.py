@@ -2,6 +2,8 @@ from django.db.models import Sum
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework import generics
+from .models import Donor, Donation
+
 
 from .models import (
     #BloodDonation,
@@ -200,7 +202,7 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'reference_id', 'donor_name', 
             'blood_group', 'hospital_name', 'units', 'volume', 
-            'status', 'city', 'lat', 'lng', 'is_available'
+            'status', 'city', 'lat', 'lng', 'is_available','whatsapp_consent', 'is_approved', 'email'
         ]
 
     def get_reference_id(self, obj):
@@ -240,3 +242,18 @@ class LiveTrackingAPI(generics.ListAPIView):
     # Ensure karein ki ye sahi model se data la raha h
     queryset = VolunteerDonor.objects.all() 
     serializer_class = VolunteerDonorSerializer
+
+
+class DonorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Donor
+        fields = '__all__'
+
+class DonationSerializer(serializers.ModelSerializer):
+    donor_details = DonorSerializer(source='donor', read_only=True)
+    ngo_details = NGOProfileSerializer(source='ngo', read_only=True)
+    workshop_details = WorkshopSerializer(source='workshop', read_only=True)
+
+    class Meta:
+        model = Donation
+        fields = '__all__'

@@ -3683,7 +3683,7 @@ export default function AdminDashboardPage() {
         <div className="w-20 md:w-56 flex items-center justify-center md:justify-start p-4 md:px-6">
           <a href="/" className="flex items-center active:scale-95 transition-transform">
             <img
-              src="/MedBridgeLogo.png"
+              src="/pathyatech-logo.png"
               alt="MedBridge Logo"
               className="w-44 h-auto max-h-12 object-contain"
               draggable={false}

@@ -213,7 +213,9 @@ class VolunteerDonor(models.Model):
     phone = models.CharField(max_length=15)
     city = models.CharField(max_length=100, default="Global")
     is_available = models.BooleanField(default=True)
-    
+    whatsapp_consent = models.BooleanField(default=False)  # ← ADD
+    is_approved = models.BooleanField(default=False)
+    email = models.EmailField(blank=True, null=True)
     # --- YEH DO LINES ADD KARNI HAIN ---
     lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -379,3 +381,41 @@ def sos_activity_log(sender, instance, created, **kwargs):
 def match_activity_log(sender, instance, created, **kwargs):
     if created:
         ActivityLog.objects.create(message=f"Match Found: {instance.blood_group} for {instance.patient_name}")
+
+
+class Donor(models.Model):
+    DONOR_TYPE_CHOICES = [
+        ('individual', 'Individual'),
+        ('corporate', 'Corporate'),
+    ]
+    name = models.CharField(max_length=200)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=20, blank=True)
+    donor_type = models.CharField(max_length=20, choices=DONOR_TYPE_CHOICES, default='individual')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.email})"
+
+
+class Donation(models.Model):
+    DONATION_TYPE_CHOICES = [
+        ('one_time', 'One Time'),
+        ('monthly', 'Monthly'),
+    ]
+    PURPOSE_CHOICES = [
+        ('workshop', 'Workshop'),
+        ('ngo_support', 'NGO Support'),
+    ]
+    donor = models.ForeignKey(Donor, on_delete=models.CASCADE, related_name='donations')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
+    transaction_id = models.CharField(max_length=100, blank=True)
+    donation_type = models.CharField(max_length=20, choices=DONATION_TYPE_CHOICES, default='one_time')
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default='workshop')
+    ngo = models.ForeignKey('NGOProfile', on_delete=models.SET_NULL, null=True, blank=True)
+    workshop = models.ForeignKey('Workshop', on_delete=models.SET_NULL, null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.donor.name} - ₹{self.amount}"

@@ -2,60 +2,61 @@ import React from 'react';
 
 export default function Footer() {
   return (
-    <footer className="bg-[#FAFBFD] text-slate-800 pt-20 pb-10 border-t border-slate-100 mt-20">
+    <footer className="bg-white border-t border-slate-100 pt-20 pb-10">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-20">
-          
+
           {/* COLUMN 1: LOGO & SOCIALS */}
           <div className="md:col-span-4 flex flex-col items-start gap-6">
             <a href="/" className="flex items-center gap-2">
-              <img src="/MedBridgeLogo.png" alt="MedBridge Logo" className="h-10 w-auto" />
+              <img src="/pathyatech-logo.png" alt="Pathyatech Logo" className="h-10 w-auto" />
             </a>
-            <p className="text-[#6C757D] text-base leading-relaxed max-w-sm">
-              Connect with verified doctors, book appointments instantly, and manage your prescriptions and medical records securely — all in one platform.
+            <p className="text-slate-500 text-base leading-relaxed max-w-sm font-medium">
+              Connecting underprivileged communities with verified NGO-supported doctors and medical camps. Secure, transparent, and accessible healthcare for all.
             </p>
-            
-            <div className="flex items-center gap-2.5 bg-[#E8FBF4] text-[#12B886] px-4 py-1.5 rounded-full border border-[#D3F9EB]">
-              <div className="h-2 w-2 rounded-full bg-[#12B886]"></div>
-              <span className="text-[11px] font-bold uppercase tracking-[0.15em]">SYSTEMS OPERATIONAL</span>
-            </div>
-            
-            <div className="flex gap-4 mt-4">
-              {/* Social Icons Mapping */}
-              {[
-                { name: 'Twitter', path: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z' },
-                { name: 'Facebook', path: 'M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z' },
-                // ... (Aapke baaki social paths yahan rahenge)
-              ].map((social) => (
-                <a key={social.name} href="#" className="group h-11 w-11 flex items-center justify-center rounded-2xl bg-[#F8F9FA] border border-[#F1F3F5] transition-all duration-300 hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-200 hover:-translate-y-1">
-                  <svg className="h-5 w-5 text-[#ADB5BD] transition-colors duration-300 group-hover:text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d={social.path}/>
-                  </svg>
-                </a>
-              ))}
+            <div className="flex items-center gap-2.5 bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full border border-emerald-100">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-[11px] font-bold uppercase tracking-[0.15em]">Systems Operational</span>
             </div>
           </div>
 
-          {/* COLUMN 2 & 3: LINKS */}
-          <div className="md:col-span-3 flex flex-col gap-6 md:pl-10 pt-2">
-            <h4 className="font-bold text-slate-950 uppercase tracking-[0.2em] text-[11px]">MEDICAL CARE</h4>
-            <ul className="space-y-4 text-[#5A636D] text-[15px] font-medium">
-              {["Find Doctors", "Book Appointments", "Video Consultation", "Digital Prescriptions", "Medical Records"].map((item) => (
-                <li key={item} className="group flex items-center gap-2 cursor-pointer transition-all duration-300">
+          {/* COLUMN 2: NAVIGATION */}
+          <div className="md:col-span-2 flex flex-col gap-6 pt-2">
+            <h4 className="font-black text-slate-950 uppercase tracking-[0.2em] text-[11px]">Navigate</h4>
+            <ul className="space-y-4">
+              {[
+                { label: "Home", href: "/" },
+                { label: "Events", href: "/#events" },
+                { label: "Programs", href: "/#programs" },
+                { label: "NGO", href: "/#ngo" },
+                { label: "About Us", href: "/#about" },
+              ].map((item) => (
+                <li key={item.label} className="group flex items-center gap-2 cursor-pointer">
                   <span className="opacity-0 -ml-4 text-blue-600 font-bold transition-all duration-300 group-hover:opacity-100 group-hover:ml-0">–</span>
-                  <a href="#" className="hover:text-blue-600 transition-colors group-hover:translate-x-1 duration-300">{item}</a>
+                  <a href={item.href} className="text-slate-500 font-medium text-[15px] hover:text-blue-600 transition-colors group-hover:translate-x-1 duration-300">
+                    {item.label}
+                  </a>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="md:col-span-2 flex flex-col gap-6 pt-2">
-            <h4 className="font-bold text-slate-950 uppercase tracking-[0.2em] text-[11px]">PLATFORM</h4>
-            <ul className="space-y-4 text-[#5A636D] text-[15px] font-medium">
-              {["About MedBridge", "For Doctors", "Health Articles", "Contact Support", "Help Center"].map((item) => (
-                <li key={item} className="group flex items-center gap-2 cursor-pointer transition-all duration-300">
+          {/* COLUMN 3: PROGRAMMES */}
+          <div className="md:col-span-3 flex flex-col gap-6 pt-2">
+            <h4 className="font-black text-slate-950 uppercase tracking-[0.2em] text-[11px]">Programmes</h4>
+            <ul className="space-y-4">
+              {[
+                { label: "Education", href: "/programmes/education" },
+                { label: "Women Empowerment", href: "/programmes/women-empowerment" },
+                { label: "Maternal Health", href: "/programmes/maternal-health" },
+                { label: "Eye Care", href: "/programmes/eye-care-(opthalmology)" },
+                { label: "Vaccination Drives", href: "/programmes/vaccination-drives" },
+              ].map((item) => (
+                <li key={item.label} className="group flex items-center gap-2 cursor-pointer">
                   <span className="opacity-0 -ml-4 text-blue-600 font-bold transition-all duration-300 group-hover:opacity-100 group-hover:ml-0">–</span>
-                  <a href="#" className="hover:text-blue-600 transition-colors group-hover:translate-x-1 duration-300">{item}</a>
+                  <a href={item.href} className="text-slate-500 font-medium text-[15px] hover:text-blue-600 transition-colors group-hover:translate-x-1 duration-300">
+                    {item.label}
+                  </a>
                 </li>
               ))}
             </ul>
@@ -63,30 +64,57 @@ export default function Footer() {
 
           {/* COLUMN 4: NEWSLETTER */}
           <div className="md:col-span-3 flex flex-col gap-6 pt-2">
-            <h4 className="font-bold text-slate-950 uppercase tracking-[0.2em] text-[11px]">NEWSLETTER</h4>
-            <p className="text-[#6C757D] text-[15px] font-medium leading-relaxed">Get health tips and medical insights delivered to your inbox.</p>
-            <div className="flex gap-2.5 items-center p-2.5 bg-white rounded-full border border-[#E9ECEF] focus-within:border-blue-400 transition-all shadow-inner">
-              <input type="email" placeholder="email@example.com" className="bg-transparent pl-3 py-1 text-[15px] w-full outline-none text-slate-900 font-medium" />
-              <button className="bg-slate-900 p-3 rounded-full text-white hover:bg-slate-700 transition active:scale-95">
+            <h4 className="font-black text-slate-950 uppercase tracking-[0.2em] text-[11px]">Newsletter</h4>
+            <p className="text-slate-500 text-[15px] font-medium leading-relaxed">
+              Get health tips and medical insights delivered to your inbox.
+            </p>
+            <div className="flex gap-2.5 items-center p-2.5 bg-slate-50 rounded-full border border-slate-200 focus-within:border-blue-400 transition-all">
+              <input
+                type="email"
+                placeholder="email@example.com"
+                className="bg-transparent pl-3 py-1 text-[15px] w-full outline-none text-slate-900 font-medium placeholder:text-slate-400"
+              />
+              <button className="bg-blue-600 p-3 rounded-full text-white hover:bg-blue-700 transition active:scale-95">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
               </button>
             </div>
+
+            {/* Contact Info */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-3 text-slate-500 text-sm font-medium">
+                <div className="h-8 w-8 bg-blue-50 rounded-xl flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-blue-600">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                  </svg>
+                </div>
+                contact@pathyatech.com
+              </div>
+              <div className="flex items-center gap-3 text-slate-500 text-sm font-medium">
+                <div className="h-8 w-8 bg-blue-50 rounded-xl flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-blue-600">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0.0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                  </svg>
+                </div>
+                +91 98765 43210
+              </div>
+            </div>
           </div>
         </div>
 
         {/* BOTTOM BAR */}
-        <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
-          <p className="text-[13px] font-semibold text-[#6C757D]">
-            © 2026 MedBridge Healthcare Group. | <span className="text-[#ADB5BD]">Built for better living.</span>
+        <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+          <p className="text-[13px] font-semibold text-slate-400">
+            © 2026 Pathyatech Healthcare. | <span className="text-slate-300">Built for better living.</span>
           </p>
-          <div className="flex gap-6 text-[11px] font-bold text-slate-700 uppercase tracking-[0.15em]">
-            <a href="#" className="hover:text-blue-600 transition-colors">TERMS OF SERVICE</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">PRIVACY POLICY</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">COOKIE SETTINGS</a>
+          <div className="flex gap-6 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">
+            <a href="#" className="hover:text-blue-600 transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-blue-600 transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-blue-600 transition-colors">Cookie Settings</a>
           </div>
         </div>
+
       </div>
     </footer>
   );

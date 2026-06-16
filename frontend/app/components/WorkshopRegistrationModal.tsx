@@ -210,7 +210,7 @@ export default function WorkshopRegistrationModal({
           </form>
 
           <p className="text-[10px] text-center text-slate-400 mt-6 uppercase font-bold tracking-widest">
-            Secure Registration via MedBridge Hub
+            Secure Registration via PathyaTech Hub
           </p>
         </div>
       </div>

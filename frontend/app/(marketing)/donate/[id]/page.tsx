@@ -70,7 +70,117 @@ export default function DonationPage() {
   // Dynamic Calculation Logic
   // Amount ko basePrice se divide karke count nikalna (Kam se kam 1 hamesha dikhega)
   const calculatedImpact = Math.max(1, Math.floor(Number(amount) / program.basePrice));
+  const [donorName, setDonorName] = useState("");
+const [donorEmail, setDonorEmail] = useState("");
+const [donorPhone, setDonorPhone] = useState("");
+const [isSubmitting, setIsSubmitting] = useState(false);
+const [isSuccess, setIsSuccess] = useState(false);
+const [error, setError] = useState("");
 
+const handleDonate = async () => {
+  if (!donorName.trim()) { setError("Please enter your name."); return; }
+  if (!donorEmail.trim() || !donorEmail.includes("@")) { setError("Please enter a valid email."); return; }
+  if (!amount || Number(amount) <= 0) { setError("Please enter a valid amount."); return; }
+
+  setError("");
+  setIsSubmitting(true);
+
+  try {
+    const API = "http://127.0.0.1:8000/api";
+
+// Step 1: Donor create karo
+const donorRes = await fetch(`${API}/donors/`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    name: donorName.trim(),
+    email: donorEmail.trim().toLowerCase(),
+    phone: donorPhone.trim(),
+    donor_type: "individual",
+  }),
+});
+
+// ✅ SIRF EK BAAR .json() - pehle parse karo
+const donorData = await donorRes.json();
+console.log("Donor API Response:", donorData);
+
+let donorId: number;
+if (donorRes.ok) {
+  // ✅ donorData already parsed hai, dobara .json() mat karo
+  donorId = donorData.id;
+} else {
+  // Donor already exists - get existing
+  const allDonors = await fetch(`${API}/donors/`).then(r => r.json());
+  const existing = allDonors.find((d: any) =>
+    d.email.toLowerCase() === donorEmail.trim().toLowerCase()
+  );
+  if (!existing) throw new Error("Could not create donor.");
+  donorId = existing.id;
+}
+
+    // Step 2: Donation create karo
+    const donationRes = await fetch(`${API}/donations/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        donor: donorId,
+        amount: Number(amount),
+        donation_type: "one_time",
+        purpose: "ngo_support",
+        transaction_id: `TXN-${Date.now()}`,
+      }),
+    });
+
+    if (!donationRes.ok) throw new Error("Donation failed.");
+
+    setIsSuccess(true);
+
+  } catch (err: any) {
+    setError(err.message || "Something went wrong. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+if (isSuccess) {
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
+      <div className="bg-white rounded-[2.5rem] p-14 max-w-md w-full shadow-xl text-center">
+        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle2 size={40} className="text-emerald-500" />
+        </div>
+        <h2 className="text-3xl font-black text-slate-900 mb-2">Thank You! 🎉</h2>
+        <p className="text-slate-500 font-bold mb-4">
+          Your donation of <span className="text-blue-600 font-black">₹{amount}</span> to{" "}
+          <span className="font-black text-slate-800">{program.title}</span> has been recorded.
+        </p>
+        <div className="bg-slate-50 rounded-2xl p-5 text-left space-y-2 mb-8">
+          <div className="flex justify-between">
+            <span className="text-xs font-bold text-slate-400">Name</span>
+            <span className="text-xs font-black text-slate-800">{donorName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-xs font-bold text-slate-400">Email</span>
+            <span className="text-xs font-black text-slate-800">{donorEmail}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-xs font-bold text-slate-400">Amount</span>
+            <span className="text-xs font-black text-emerald-600">₹{amount}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-xs font-bold text-slate-400">Programme</span>
+            <span className="text-xs font-black text-slate-800">{program.title}</span>
+          </div>
+        </div>
+        <button
+          onClick={() => router.push("/")}
+          className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700 transition-all"
+        >
+          Back to Home
+        </button>
+      </div>
+    </div>
+  );
+}
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20 pt-10 font-sans">
       <div className="max-w-6xl mx-auto px-6">
@@ -118,6 +228,7 @@ export default function DonationPage() {
                     </button>
                   ))}
                 </div>
+
                 <input 
                   type="number"
                   className="w-full px-6 py-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-600 outline-none font-bold text-slate-900"
@@ -127,6 +238,31 @@ export default function DonationPage() {
                 />
               </div>
 
+              {/* Donor Details - YAHAN ADD KARO */}
+              <div className="mt-8 space-y-4">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Your Details</label>
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={donorName}
+                  onChange={(e) => setDonorName(e.target.value)}
+                  className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-600 outline-none font-bold text-slate-900"
+                />
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={donorEmail}
+                  onChange={(e) => setDonorEmail(e.target.value)}
+                  className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-600 outline-none font-bold text-slate-900"
+                />
+                <input
+                  type="tel"
+                  placeholder="Phone Number (optional)"
+                  value={donorPhone}
+                  onChange={(e) => setDonorPhone(e.target.value)}
+                  className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-blue-600 outline-none font-bold text-slate-900"
+                />
+              </div>
               <div className="mt-12 space-y-6">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Payment Method</label>
                 <div className="grid grid-cols-3 gap-4">
@@ -145,9 +281,25 @@ export default function DonationPage() {
                 </div>
               </div>
 
-              <button className="w-full mt-12 bg-slate-950 text-white py-6 rounded-3xl font-black text-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3">
-                Donate Now <ArrowRight size={20} />
-              </button>
+              tsx{/* Error */}
+{error && (
+  <p className="mt-4 text-sm font-bold text-rose-600 bg-rose-50 px-4 py-3 rounded-2xl">
+    {error}
+  </p>
+)}
+
+{/* Button */}
+<button
+  onClick={handleDonate}
+  disabled={isSubmitting}
+  className="w-full mt-8 bg-slate-950 text-white py-6 rounded-3xl font-black text-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 disabled:opacity-60"
+>
+  {isSubmitting ? (
+    <><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /> Processing...</>
+  ) : (
+    <>Donate ₹{amount} Now <ArrowRight size={20} /></>
+  )}
+</button>
             </div>
           </div>
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Search, Navigation, Droplets, ShieldAlert, X, CheckCircle2, AlertTriangle, Building2, Droplet } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
+//import 'leaflet/dist/leaflet.css';
 
 // --- SSR FIX FOR MAP ---
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
@@ -17,7 +17,8 @@ function MapController({ center }: { center: [number, number] | null }) {
   const map = (require('react-leaflet')).useMap();
   useEffect(() => {
     if (center) {
-      map.setView(center, 12, { animate: true, duration: 1.5 });
+     // map.setView(center, 12, { animate: true, duration: 1.5 });
+    map.flyTo(center, 14, { animate: true, duration: 1.2 });
     }
   }, [center, map]);
   return null;
@@ -289,12 +290,14 @@ export default function DonorMap() {
             </div>
         </div>
 
-<MapContainer 
-  center={[22.7196, 75.8577]} // Ab yeh Indore se start hoga
-  zoom={13}                   // Zoom thoda badha dete hain taaki city dikhe
-  className="h-full w-full" 
-  zoomControl={false}
->
+        <MapContainer 
+          center={[22.7196, 75.8577]}
+          zoom={13}
+          className="h-full w-full"
+          zoomControl={true}
+          scrollWheelZoom={true}
+         
+        >
             <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
           
           {/* MapController adds the fly-to animation */}
