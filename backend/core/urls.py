@@ -1,6 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import VolunteerDonorViewSet
+from .views import DonorResponseView
+
 from .views import (
     #BloodDonationViewSet,
     #BloodStockViewSet,
@@ -19,7 +21,9 @@ from .views import (
     BloodMatchListAPI,
     DashboardStatsAPI,
     LiveTrackingAPI,
-    MissionLogsAPI
+    MissionLogsAPI,
+     DonorViewSet,     
+    DonationViewSet,
 )
 
 # 1. Router setup karein ViewSets ke liye
@@ -30,7 +34,10 @@ router.register(r'hospitals', HospitalViewSet)
 router.register(r'referrals', ReferralViewSet)
 router.register(r'sos-requests', SOSRequestViewSet)
 router.register(r'volunteer-donors', VolunteerDonorViewSet)
-router.register(r'notifications', NotificationViewSet) 
+router.register(r'donors', DonorViewSet)
+router.register(r'donations', DonationViewSet)
+# 'basename' add karne se error khatam ho jayega
+router.register(r'notifications', NotificationViewSet, basename='notification')
 urlpatterns = [
     # 2. Router ki saari URLs ko yahan include karein
     path('', include(router.urls)), 
@@ -41,5 +48,8 @@ urlpatterns = [
 
     path('live-tracking/', LiveTrackingAPI.as_view(), name='live-tracking'),
 
-    path('mission-logs/', MissionLogsAPI.as_view(), name='mission-logs')
+    path('mission-logs/', MissionLogsAPI.as_view(), name='mission-logs'),
+
+    path('donor/respond/', DonorResponseView.as_view(), name='donor-respond')
+
 ]

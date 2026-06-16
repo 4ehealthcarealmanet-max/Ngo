@@ -2,7 +2,7 @@ import secrets
 
 from django.db import models
 from django.utils import timezone
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 def generate_referral_id():
     # Example: REF-20260331-1A2B3C
@@ -203,7 +203,6 @@ class WorkshopRegistration(models.Model):
 
 
 
-# 1. Volunteer Donors (Naya simplified model)
 class VolunteerDonor(models.Model):
     BLOOD_GROUPS = [
         ('A+', 'A+'), ('A-', 'A-'), ('B+', 'B+'), ('B-', 'B-'),
@@ -214,8 +213,17 @@ class VolunteerDonor(models.Model):
     phone = models.CharField(max_length=15)
     city = models.CharField(max_length=100, default="Global")
     is_available = models.BooleanField(default=True)
+    whatsapp_consent = models.BooleanField(default=False)  # ← ADD
+    is_approved = models.BooleanField(default=False)
+    email = models.EmailField(blank=True, null=True)
+    # --- YEH DO LINES ADD KARNI HAIN ---
+    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    # ----------------------------------
+
     hospital_name = models.CharField(max_length=200, blank=True, null=True, default="City Hospital")
-    units = models.IntegerField(default=1) # Taaki aap backend se number daal sakein
+    units = models.IntegerField(default=1)
+    
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
         ('In Transit', 'In Transit'),
@@ -223,8 +231,16 @@ class VolunteerDonor(models.Model):
         ('Cancelled', 'Cancelled'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    mission_started_at = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return f"{self.name} ({self.blood_group})"
+
+    def save(self, *args, **kwargs):
+        # Mark mission start time the first time donor goes "In Transit"
+        if self.status == "In Transit" and self.mission_started_at is None:
+            self.mission_started_at = timezone.now()
+        super().save(*args, **kwargs)
 
 # 2. Emergency SOS Requests (Hospital se aane wali requests)
 class EmergencyRequest(models.Model):
@@ -245,10 +261,19 @@ class EmergencyRequest(models.Model):
         return f"Emergency: {self.blood_group} for {self.hospital_name}"
 
 class SOSRequest(models.Model):
+    URGENCY_NORMAL = "Normal"
+    URGENCY_CRITICAL = "Critical"
+
+    URGENCY_CHOICES = [
+        (URGENCY_NORMAL, "Normal"),
+        (URGENCY_CRITICAL, "Critical"),
+    ]
+
     hospital_name = models.CharField(max_length=255)
     patient_name = models.CharField(max_length=255, default="Unknown") # Ye field zaroori hai
     blood_group = models.CharField(max_length=10) # Iske bina matching nahi hogi
     units_required = models.IntegerField(default=1)
+    urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default=URGENCY_NORMAL)
     status = models.CharField(max_length=20, default='Pending') # Pending/Broadcasting
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -313,6 +338,37 @@ def donor_activity_log(sender, instance, created, **kwargs):
     else:
         ActivityLog.objects.create(message=f"Mission Update: {instance.name} is now {instance.status}")
 
+
+@receiver(pre_save, sender=VolunteerDonor)
+def donor_status_sync_pre_save(sender, instance, **kwargs):
+    if not instance.pk:
+        instance._previous_status = None
+        return
+
+    instance._previous_status = (
+        VolunteerDonor.objects.filter(pk=instance.pk).values_list("status", flat=True).first()
+    )
+
+
+@receiver(post_save, sender=VolunteerDonor)
+def donor_notification_status_sync(sender, instance, created, **kwargs):
+    if created:
+        return
+
+    previous_status = getattr(instance, "_previous_status", None)
+    if previous_status == instance.status:
+        return
+
+    if instance.status == "In Transit":
+        latest_pending = (
+            Notification.objects.filter(donor=instance, status="Pending")
+            .order_by("-created_at")
+            .first()
+        )
+        if latest_pending:
+            latest_pending.status = "Accepted"
+            latest_pending.save(update_fields=["status"])
+
 # 2. Jab koi SOS Request aaye
 @receiver(post_save, sender=SOSRequest)
 def sos_activity_log(sender, instance, created, **kwargs):
@@ -325,3 +381,41 @@ def sos_activity_log(sender, instance, created, **kwargs):
 def match_activity_log(sender, instance, created, **kwargs):
     if created:
         ActivityLog.objects.create(message=f"Match Found: {instance.blood_group} for {instance.patient_name}")
+
+
+class Donor(models.Model):
+    DONOR_TYPE_CHOICES = [
+        ('individual', 'Individual'),
+        ('corporate', 'Corporate'),
+    ]
+    name = models.CharField(max_length=200)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=20, blank=True)
+    donor_type = models.CharField(max_length=20, choices=DONOR_TYPE_CHOICES, default='individual')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.email})"
+
+
+class Donation(models.Model):
+    DONATION_TYPE_CHOICES = [
+        ('one_time', 'One Time'),
+        ('monthly', 'Monthly'),
+    ]
+    PURPOSE_CHOICES = [
+        ('workshop', 'Workshop'),
+        ('ngo_support', 'NGO Support'),
+    ]
+    donor = models.ForeignKey(Donor, on_delete=models.CASCADE, related_name='donations')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
+    transaction_id = models.CharField(max_length=100, blank=True)
+    donation_type = models.CharField(max_length=20, choices=DONATION_TYPE_CHOICES, default='one_time')
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default='workshop')
+    ngo = models.ForeignKey('NGOProfile', on_delete=models.SET_NULL, null=True, blank=True)
+    workshop = models.ForeignKey('Workshop', on_delete=models.SET_NULL, null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.donor.name} - ₹{self.amount}"

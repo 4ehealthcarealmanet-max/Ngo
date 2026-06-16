@@ -19,55 +19,36 @@ export default function Navbar() {
   return (
     <>
       {/* ================= NAVBAR START ================= */}
-      <nav className="glass-header sticky top-0 z-[90] bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
+<nav className="glass-header fixed top-0 left-0 right-0 z-[90] bg-white/80 backdrop-blur-md border-b border-slate-100">        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
           {/* LOGO */}
           <a href="/" className="flex items-center group transition-transform active:scale-95">
             <img
-              src="/MedBridgeLogo.png"
-              alt="MedBridge Logo"
+              src="/pathyatech-logo.png"
+              alt="pathyatech Logo"
               className="h-[46px] md:h-[50px] w-auto object-contain"
               draggable={false}
             />
           </a>
 
           {/* CENTER LINKS (Exactly as you sent) */}
-          <div className="hidden items-center gap-1 md:flex">
-            <a href="#" className="flex items-center gap-2.5 text-sm font-semibold text-slate-600 hover:text-brand-blue transition-colors px-3 py-2 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-              </svg>
-              Find Doctors
-            </a>
-            
-            <a href="#" className="flex items-center gap-2.5 text-sm font-semibold text-slate-600 hover:text-brand-blue transition-colors px-3 py-2 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
-              </svg>
-              Consult Online
-            </a>
-            
-            <a href="#" className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-blue transition-colors px-3 py-2 rounded-lg group">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5 text-slate-500 group-hover:text-brand-blue transition-colors">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18c-2.305 0-4.408.867-6 2.292m0-14.25v14.25" />
-              </svg>
-              <span>Health Article</span>
-            </a>
-            
-            <a href="#" className="flex items-center gap-2.5 text-sm font-semibold text-slate-600 hover:text-brand-blue transition-colors px-3 py-2 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
-              </svg>
-              About
-            </a>
-            
-            <a href="#" className="flex items-center gap-2.5 text-sm font-semibold text-slate-600 hover:text-brand-blue transition-colors px-3 py-2 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
-              </svg>
-              Help
-            </a>
-          </div>
+         {/* CENTER LINKS - UPDATED */}
+         <div className="hidden items-center gap-1 md:flex">
+  <a href="/" className="text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors px-4 py-2 rounded-lg">
+    Home
+  </a>
+  <a href="/#events" className="text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors px-4 py-2 rounded-lg">
+    Events
+  </a>
+ <a href="/#programs" className="text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors px-4 py-2 rounded-lg">
+  Programs
+</a>
+  <a href="/#ngo" className="text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors px-4 py-2 rounded-lg">
+    NGO
+  </a>
+  <a href="/#about" className="text-sm font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors px-4 py-2 rounded-lg">
+    About Us
+  </a>
+</div>
 
           {/* ACTION BUTTONS */}
           {/* ================= UPDATED ACTION BUTTONS (EXACT MATCH) ================= */}
@@ -83,6 +64,7 @@ export default function Navbar() {
 
             {/* Original Get Started Style with Arrow and Brand Blue */}
             <button 
+               id="navbar-register-btn"
                 onClick={() => setIsRegisterOpen(true)}
                 className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2"
             >
@@ -125,15 +107,15 @@ export default function Navbar() {
         <div className="mx-auto flex h-20 w-auto items-center justify-center mb-10 transition-transform active:scale-95">
           {/* Exact same logo path as Navbar */}
           <img
-            src="/MedBridgeLogo.png"
+            src="/pathyatech-Logo.png"
             alt="MedBridge Logo"
-            className="h-14 w-auto object-contain shadow-lg rounded-2xl p-2 bg-white"
+            //className="h-14 w-auto object-contain shadow-lg p-2 bg-white"
             draggable={false}
           />
         </div>
 
         <h2 className="text-4xl font-black text-slate-950 tracking-tight leading-tight">
-          Partner with <span className="text-blue-600">MedBridge</span>
+          Partner with <span className="text-blue-600">PathyaTech</span>
         </h2>
         <p className="text-slate-500 text-lg mt-4 font-medium max-w-md mx-auto leading-relaxed">
           Empower rural communities by connecting your healthcare resources.

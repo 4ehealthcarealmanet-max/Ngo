@@ -465,7 +465,7 @@ export default function HealthcareAccessSection({
                   {!showCard ? (
                     <>
                       <p className="text-lg text-slate-600 font-medium leading-relaxed">
-                        MedBridge creates a centralized digital vault. Click below to see how a Patient ID is generated.
+                        Pathyatech creates a centralized digital vault. Click below to see how a Patient ID is generated.
                       </p>
 
                       {healthIdPickerOpen && (

@@ -2,6 +2,8 @@ from django.db.models import Sum
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework import generics
+from .models import Donor, Donation
+
 
 from .models import (
     #BloodDonation,
@@ -186,7 +188,7 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
     # Match History table ke liye
     donor_name = serializers.CharField(source='name', read_only=True)
     
-    # Proximity Volunteers card ke liye (Wapas add karein)
+    # Proximity Volunteers card ke liye
     name = serializers.CharField()
     
     reference_id = serializers.SerializerMethodField()
@@ -196,10 +198,11 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VolunteerDonor
-        # 'name' ko fields list mein shamil rakhein
+        # 'lat' aur 'lng' ko shamil karna zaroori hai taaki map move kar sake
         fields = [
             'id', 'name', 'reference_id', 'donor_name', 
-            'blood_group', 'hospital_name', 'units', 'volume', 'status'
+            'blood_group', 'hospital_name', 'units', 'volume', 
+            'status', 'city', 'lat', 'lng', 'is_available','whatsapp_consent', 'is_approved', 'email'
         ]
 
     def get_reference_id(self, obj):
@@ -209,14 +212,10 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
         return getattr(obj, 'hospital_name', f"{obj.city} Hospital")
 
     def get_units(self, obj):
-        # Yahan sirf number return karein
         return getattr(obj, 'units', 1) 
 
     def get_volume(self, obj):
-        # Match History ke Units column ke liye
         return getattr(obj, 'units', 1)
-
-    
 
 
 class SOSRequestSerializer(serializers.ModelSerializer):
@@ -243,3 +242,18 @@ class LiveTrackingAPI(generics.ListAPIView):
     # Ensure karein ki ye sahi model se data la raha h
     queryset = VolunteerDonor.objects.all() 
     serializer_class = VolunteerDonorSerializer
+
+
+class DonorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Donor
+        fields = '__all__'
+
+class DonationSerializer(serializers.ModelSerializer):
+    donor_details = DonorSerializer(source='donor', read_only=True)
+    ngo_details = NGOProfileSerializer(source='ngo', read_only=True)
+    workshop_details = WorkshopSerializer(source='workshop', read_only=True)
+
+    class Meta:
+        model = Donation
+        fields = '__all__'
