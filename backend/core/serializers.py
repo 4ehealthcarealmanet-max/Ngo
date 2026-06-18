@@ -3,7 +3,7 @@ from django.db import transaction
 from rest_framework import serializers
 from rest_framework import generics
 from .models import Donor, Donation
-
+from .models import NGOProfile
 
 from .models import (
     #BloodDonation,
@@ -49,7 +49,46 @@ class NGOProfileSerializer(serializers.ModelSerializer):
             validated_data["registration_number"] = f"NGO-{timezone.now():%Y%m%d}-{secrets.token_hex(3).upper()}"
 
         return super().create(validated_data)
+# ← Ye neeche add karo
+class NGORegistrationSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(write_only=True)
+    password = serializers.CharField(write_only=True)
+    contact_person = serializers.CharField(required=False, allow_blank=True)
 
+    class Meta:
+        model = NGOProfile
+        fields = [
+            'name',
+            'registration_number',
+            'contact_email',
+            'contact_person',
+            'city',
+            'service_type',
+            'email',
+            'password',
+        ]
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered!")
+        return value
+
+    def create(self, validated_data):
+        email = validated_data.pop('email')
+        password = validated_data.pop('password')
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password
+        )
+
+        ngo = NGOProfile.objects.create(
+            user=user,
+            is_verified=False,
+            **validated_data
+        )
+        return ngo
 
 class PatientProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,11 +114,78 @@ class WorkshopSerializer(serializers.ModelSerializer):
         return data
 
 
+class HospitalRegistrationSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(write_only=True)
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Hospital
+        fields = [
+            'name', 'license_no', 'location', 
+            'hospital_type', 'specialty', 
+            'contact', 'beds_available',
+            'email', 'password'
+        ]
+
+    def create(self, validated_data):
+        email = validated_data.pop('email')
+        password = validated_data.pop('password')
+
+        # User create karo
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password
+        )
+
+        # Hospital create karo
+        hospital = Hospital.objects.create(
+            user=user,
+            is_approved=False,  # Admin approve karega
+            **validated_data
+        )
+        return hospital
+
+
 class HospitalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hospital
         fields = "__all__"
+from django.contrib.auth.models import User
 
+class HospitalRegistrationSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(write_only=True)
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Hospital
+        fields = [
+            'name', 'license_no', 'location', 
+            'hospital_type', 'specialty', 
+            'contact', 'beds_available',
+            'email', 'password'
+        ]
+
+    def create(self, validated_data):
+        email = validated_data.pop('email')
+        password = validated_data.pop('password')
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password
+        )
+
+        hospital = Hospital.objects.create(
+            user=user,
+            is_approved=False,
+            **validated_data
+        )
+        return hospital
+def validate_email(self, value):
+    if User.objects.filter(email=value).exists():
+        raise serializers.ValidationError("This email is already registered!")
+    return value
 
 class ReferralSerializer(serializers.ModelSerializer):
     to_hospital_details = HospitalSerializer(source="to_hospital", read_only=True)

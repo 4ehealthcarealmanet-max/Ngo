@@ -1416,7 +1416,21 @@ function NGOManagement({ ngos, onOnboard, isEmpty }: NGOManagementProps) {
     normalized.sort((a, b) => a.name.localeCompare(b.name));
     return normalized;
   }, [ngos]);
-
+const handleNgoVerify = async (ngoId: number, action: 'verify' | 'reject') => {
+  try {
+    const res = await fetch(`http://localhost:8000/api/ngos/${ngoId}/verify/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    })
+    if (res.ok) {
+      // Page refresh karo updated data ke liye
+      window.location.reload()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+}
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-end justify-between gap-4">
@@ -1470,17 +1484,31 @@ function NGOManagement({ ngos, onOnboard, isEmpty }: NGOManagementProps) {
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700">{ngo.city}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700">{ngo.service_type}</td>
-                    <td className="px-6 py-4">
-                      {ngo.is_verified ? (
-                        <span className="inline-flex items-center rounded-xl bg-emerald-50 text-emerald-700 px-3 py-1 text-[10px] font-black uppercase tracking-wider">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-xl bg-amber-50 text-amber-800 px-3 py-1 text-[10px] font-black uppercase tracking-wider">
-                          Pending
-                        </span>
-                      )}
-                    </td>
+                   <td className="px-6 py-4">
+  {ngo.is_verified ? (
+    <span className="inline-flex items-center rounded-xl bg-emerald-50 text-emerald-700 px-3 py-1 text-[10px] font-black uppercase tracking-wider">
+      Active
+    </span>
+  ) : (
+    <div className="flex items-center gap-2">
+      <span className="inline-flex items-center rounded-xl bg-amber-50 text-amber-800 px-3 py-1 text-[10px] font-black uppercase tracking-wider">
+        Pending
+      </span>
+      <button
+        onClick={() => handleNgoVerify(ngo.id, 'verify')}
+        className="inline-flex items-center rounded-xl bg-emerald-600 text-white px-3 py-1 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-colors"
+      >
+        ✓ Verify
+      </button>
+      <button
+        onClick={() => handleNgoVerify(ngo.id, 'reject')}
+        className="inline-flex items-center rounded-xl bg-red-500 text-white px-3 py-1 text-[10px] font-black uppercase tracking-wider hover:bg-red-600 transition-colors"
+      >
+        ✕ Reject
+      </button>
+    </div>
+  )}
+</td>
                   </tr>
                 ))}
               </tbody>

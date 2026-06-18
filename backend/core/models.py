@@ -4,11 +4,14 @@ from django.db import models
 from django.utils import timezone
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+# models.py ke top mein ye add karo
+from django.contrib.auth.models import User
 def generate_referral_id():
     # Example: REF-20260331-1A2B3C
     return f"REF-{timezone.now():%Y%m%d}-{secrets.token_hex(3).upper()}"
 
 class NGOProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255) # NGO Name
     registration_number = models.CharField(max_length=100, unique=True) # Govt ID
     contact_email = models.EmailField(blank=True)
@@ -101,11 +104,22 @@ class ReferralNetwork(models.Model):
 
 
 class Hospital(models.Model):
+    HOSPITAL_TYPE_CHOICES = [
+        ('govt', 'Government'),
+        ('private', 'Private'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255)
+    license_no = models.CharField(max_length=100, default='UNKNOWN')  # unique=True nahi 
     location = models.CharField(max_length=255)
-    specialty = models.CharField(max_length=100)  # e.g., Cardiology/General
+    hospital_type = models.CharField(max_length=10, choices=HOSPITAL_TYPE_CHOICES, default='govt')
+    specialty = models.CharField(max_length=100)
     contact = models.CharField(max_length=100, blank=True)
     beds_available = models.PositiveIntegerField(default=0)
+    is_approved = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
 
     class Meta:
         db_table = "NGO_Hospitals"
