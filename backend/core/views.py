@@ -13,6 +13,12 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import Donor, Donation
 from .serializers import DonorSerializer, DonationSerializer
+from .serializers import HospitalRegistrationSerializer
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from .models import SOSRequest
 import os
 
 from .models import (
@@ -32,7 +38,9 @@ from .serializers import (
     VolunteerDonorSerializer,
     SOSRequestSerializer,
     NotificationSerializer,
-    BloodMatchSerializer
+    BloodMatchSerializer,
+    NGOProfileSerializer, 
+    NGORegistrationSerializer
 )
 
 from .models import NGOProfile, PatientProfile, ReferralNetwork, Workshop
@@ -64,7 +72,6 @@ class NGOListView(APIView):
         ngos = queryset.values()
         return Response(list(ngos))
 
-
 class NGOProfileViewSet(viewsets.ModelViewSet):
     queryset = NGOProfile.objects.all().order_by("name")
     serializer_class = NGOProfileSerializer
@@ -79,7 +86,35 @@ class NGOProfileViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(Q(name__icontains=search_query) | Q(service_type__icontains=search_query))
         return queryset
 
+    @action(detail=False, methods=['post'],
+            permission_classes=[AllowAny],
+            url_path='register')
+    def register(self, request):
+        serializer = NGORegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            ngo = serializer.save()
+            return Response({
+                'message': 'NGO registered successfully! Awaiting admin verification.',
+                'ngo_id': ngo.id
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['post'],
+            permission_classes=[AllowAny],
+            url_path='verify')
+    def verify(self, request, pk=None):
+        ngo = self.get_object()
+        action = request.data.get('action')
+
+        if action == 'verify':
+            ngo.is_verified = True
+            ngo.save()
+            return Response({'message': 'NGO verified successfully!'})
+        elif action == 'reject':
+            ngo.delete()
+            return Response({'message': 'NGO rejected!'})
+
+        return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
 class PatientProfileListCreateView(generics.ListCreateAPIView):
     queryset = PatientProfile.objects.select_related("ngo").all().order_by("-created_at")
     serializer_class = PatientProfileSerializer
@@ -155,10 +190,103 @@ class WorkshopRegistrationViewSet(viewsets.ModelViewSet):
         return JsonResponse({"status": "success", "message": "Reminder sent simulation"})
 
 
+
+
+
 class HospitalViewSet(viewsets.ModelViewSet):
     queryset = Hospital.objects.all().order_by("name")
     serializer_class = HospitalSerializer
 
+    def get_serializer_class(self):
+        if self.action == 'register':
+            return HospitalRegistrationSerializer
+        return HospitalSerializer
+
+    @action(detail=False, methods=['post'], 
+            permission_classes=[AllowAny], 
+            url_path='register')
+    def register(self, request):
+        serializer = HospitalRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            hospital = serializer.save()
+            return Response({
+                'message': 'Hospital registered successfully!',
+                'hospital_id': hospital.id
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], 
+            permission_classes=[IsAdminUser], 
+            url_path='approve')
+    def approve(self, request, pk=None):
+        hospital = self.get_object()
+        hospital.is_approved = True
+        hospital.save()
+        return Response({'message': 'Hospital approved successfully!'})
+
+    # ← Ye andar hai ab ✅
+    @action(detail=False, methods=['post'],
+            permission_classes=[AllowAny],
+            url_path='login')
+    def login(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        if not email or not password:
+            return Response({'error': 'Email and password required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        user = authenticate(username=email, password=password)
+
+        if not user:
+            return Response({'error': 'Invalid email or password'},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            hospital = Hospital.objects.get(user=user)
+        except Hospital.DoesNotExist:
+            return Response({'error': 'Hospital not found'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response({
+            'token': token.key,
+            'hospital_id': hospital.id,
+            'hospital_name': hospital.name,
+            'location': hospital.location,
+            'specialty': hospital.specialty,
+            'hospital_type': hospital.hospital_type,
+            'beds_available': hospital.beds_available,
+            'license_no': hospital.license_no,
+            'contact': hospital.contact,
+        })
+
+    @action(detail=False, methods=['get'],
+            permission_classes=[IsAuthenticated],
+            url_path='my-requests')
+    def my_requests(self, request):
+        try:
+            hospital = Hospital.objects.get(user=request.user)
+        except Hospital.DoesNotExist:
+            return Response({'error': 'Hospital not found'}, 
+                            status=status.HTTP_404_NOT_FOUND)
+        
+        requests = SOSRequest.objects.filter(
+            hospital_name=hospital.name
+        ).order_by('-created_at')
+        
+        data = [{
+            'id': r.id,
+            'patient_name': r.patient_name,
+            'blood_group': r.blood_group,
+            'units_required': r.units_required,
+            'urgency': r.urgency,
+            'status': r.status,
+            'created_at': r.created_at.strftime('%d %b %Y, %I:%M %p'),
+        } for r in requests]
+        
+        return Response(data)
 
 class ReferralViewSet(viewsets.ModelViewSet):
     queryset = Referral.objects.select_related("patient", "from_ngo", "to_hospital").all().order_by("-created_at")
@@ -181,6 +309,17 @@ class ReferralViewSet(viewsets.ModelViewSet):
 class SOSRequestViewSet(viewsets.ModelViewSet):
     queryset = SOSRequest.objects.all()
     serializer_class = SOSRequestSerializer
+
+    def get_queryset(self):
+        # Agar frontend ?status=Matched bhejta hai (Match History page ke liye), to wo dikhao
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            return SOSRequest.objects.filter(status=status_param).order_by('-created_at')
+
+        # Default — sirf active requests (SOS Radar ke liye)
+        return SOSRequest.objects.exclude(
+            status__in=['Matched', 'Completed']
+        ).order_by('-created_at')
 
     @action(detail=True, methods=['post'], url_path='broadcast')
     def broadcast(self, request, pk=None):
