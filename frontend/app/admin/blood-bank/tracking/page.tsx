@@ -5,7 +5,7 @@ import {
   MapPin, Navigation, Clock, ShieldCheck,
   Phone, AlertCircle, CheckCircle2, ChevronRight, X, ShieldAlert, Droplets
 } from 'lucide-react';
-
+import { apiUrl } from "@/lib/api";
 /* ─── Animated dashed route line ─── */
 const AnimatedRoute = ({ pct }: { pct: number }) => (
   <svg className="absolute inset-0 w-full h-full" style={{ top: 0, left: 0 }} preserveAspectRatio="none">
@@ -63,7 +63,9 @@ const LiveTracking = () => {
   useEffect(() => {
     const fetchLiveTracking = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/live-tracking/?status=In%20Transit');
+        //const response = await fetch('http://127.0.0.1:8000/api/live-tracking/?status=In%20Transit');
+
+        const response = await fetch(apiUrl("/api/live-tracking/?status=In%20Transit"))
         const contentType = response.headers.get("content-type");
         if (!response.ok || !contentType?.includes("application/json")) return;
         const data = await response.json();
@@ -83,7 +85,8 @@ const LiveTracking = () => {
 
     const fetchLogs = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/mission-logs/');
+        //const response = await fetch('http://127.0.0.1:8000/api/mission-logs/');
+        const response = await fetch(apiUrl("/api/mission-logs/"))
         if (response.ok) {
           const data = await response.json();
           const nextJson = JSON.stringify(data);
@@ -129,7 +132,8 @@ const LiveTracking = () => {
     setDetailError(null);
     setMarkingDelivered(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/volunteer-donors/${selectedDelivery.id}/`, {
+      //const res = await fetch(`http://127.0.0.1:8000/api/volunteer-donors/${selectedDelivery.id}/`, {
+        const res = await fetch(apiUrl(`/api/volunteer-donors/${selectedDelivery.id}/`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Completed" }),
@@ -138,8 +142,10 @@ const LiveTracking = () => {
       lastDeliveriesJson.current = "";
       lastLogsJson.current = "";
       const [liveRes, logsRes] = await Promise.all([
-        fetch('http://127.0.0.1:8000/api/live-tracking/?status=In%20Transit'),
-        fetch('http://127.0.0.1:8000/api/mission-logs/'),
+        //fetch('http://127.0.0.1:8000/api/live-tracking/?status=In%20Transit'),
+        //fetch('http://127.0.0.1:8000/api/mission-logs/'),
+        fetch(apiUrl("/api/live-tracking/?status=In%20Transit")),
+        fetch(apiUrl("/api/mission-logs/")),
       ]);
       if (liveRes.ok) {
         const live = await liveRes.json();

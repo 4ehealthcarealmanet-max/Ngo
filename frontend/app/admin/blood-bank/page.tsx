@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Search, AlertCircle, Radio, MapPin, ShieldAlert } from 'lucide-react';
 import axios from 'axios';
-
-const API_URL = "http://127.0.0.1:8000/api/sos-requests/";
-
+import { apiUrl } from "@/lib/api";
+//const API_URL = "http://127.0.0.1:8000/api/sos-requests/";
+const API_URL = apiUrl("/api/sos-requests/");
 const statusConfig: Record<string, { label: string; className: string }> = {
   Pending:  { label: "PENDING",  className: "bg-amber-50 text-amber-600 border border-amber-100" },
   Sent:     { label: "SENT",     className: "bg-blue-50 text-blue-600 border border-blue-200" },
@@ -24,9 +24,12 @@ export default function SOSControlRoom() {
   const fetchData = async () => {
     try {
       const [reqRes, donorRes, notifRes] = await Promise.all([
+        //axios.get(API_URL),
+        //axios.get('http://127.0.0.1:8000/api/volunteer-donors/'),
+        //axios.get('http://127.0.0.1:8000/api/notifications/'), 
         axios.get(API_URL),
-        axios.get('http://127.0.0.1:8000/api/volunteer-donors/'),
-        axios.get('http://127.0.0.1:8000/api/notifications/'), // No status filter - sab dikhao
+        axios.get(apiUrl("/api/volunteer-donors/")),
+        axios.get(apiUrl("/api/notifications/")),
       ]);
       setRequests(reqRes.data);
       setDonors(donorRes.data);

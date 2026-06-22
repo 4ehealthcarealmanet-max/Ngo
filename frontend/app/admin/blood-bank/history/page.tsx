@@ -5,7 +5,7 @@ import {
   Search, Download, ExternalLink, X, MapPin, 
   Phone, Droplets, Heart, Activity, Users, TrendingUp, Award
 } from 'lucide-react';
-
+import { apiUrl } from "@/lib/api";
 const MatchHistory = () => {
   // State for dynamic data
   const [historyData, setHistoryData] = useState([]);
@@ -25,7 +25,8 @@ const MatchHistory = () => {
 useEffect(() => {
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/dashboard-stats/');
+      //const response = await fetch('http://127.0.0.1:8000/api/dashboard-stats/');
+      const response = await fetch(apiUrl("/api/dashboard-stats/"));
       const data = await response.json();
       
       // console mein check karein ki data mil raha hai
@@ -50,7 +51,8 @@ useEffect(() => {
       try {
         setLoading(true);
         // Replace with your actual Django API URL
-        const response = await fetch('http://127.0.0.1:8000/api/blood-bank/matches/');
+        //const response = await fetch('http://127.0.0.1:8000/api/blood-bank/matches/');
+        const response = await fetch(apiUrl("/api/blood-bank/matches/"));
         const data = await response.json();
         setHistoryData(data);
       } catch (error) {

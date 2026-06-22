@@ -5,7 +5,7 @@ import {
   ShieldCheck, Lock, Heart, ChevronLeft, CreditCard, 
   Smartphone, Building2, CheckCircle2, Info, ArrowRight, Zap 
 } from 'lucide-react';
-
+import { apiUrl } from "@/lib/api";
 // Sabhi 8 Programmes ka Detailed & Dynamic Data
 const donateData = {
   "education": { 
@@ -68,7 +68,6 @@ export default function DonationPage() {
   const [method, setMethod] = useState("upi");
 
   // Dynamic Calculation Logic
-  // Amount ko basePrice se divide karke count nikalna (Kam se kam 1 hamesha dikhega)
   const calculatedImpact = Math.max(1, Math.floor(Number(amount) / program.basePrice));
   const [donorName, setDonorName] = useState("");
 const [donorEmail, setDonorEmail] = useState("");
@@ -86,10 +85,10 @@ const handleDonate = async () => {
   setIsSubmitting(true);
 
   try {
-    const API = "http://127.0.0.1:8000/api";
-
+    //const API = "http://127.0.0.1:8000/api";
+     fetch(apiUrl("/api/donors/"))
 // Step 1: Donor create karo
-const donorRes = await fetch(`${API}/donors/`, {
+const donorRes = await fetch(`/api/donors/`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -100,7 +99,6 @@ const donorRes = await fetch(`${API}/donors/`, {
   }),
 });
 
-// ✅ SIRF EK BAAR .json() - pehle parse karo
 const donorData = await donorRes.json();
 console.log("Donor API Response:", donorData);
 
@@ -110,7 +108,7 @@ if (donorRes.ok) {
   donorId = donorData.id;
 } else {
   // Donor already exists - get existing
-  const allDonors = await fetch(`${API}/donors/`).then(r => r.json());
+  const allDonors = await fetch(`/api/donors/`).then(r => r.json());
   const existing = allDonors.find((d: any) =>
     d.email.toLowerCase() === donorEmail.trim().toLowerCase()
   );
@@ -119,7 +117,7 @@ if (donorRes.ok) {
 }
 
     // Step 2: Donation create karo
-    const donationRes = await fetch(`${API}/donations/`, {
+    const donationRes = await fetch(`api/donations/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
