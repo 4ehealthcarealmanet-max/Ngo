@@ -6,6 +6,8 @@ import {
   Phone, AlertCircle, CheckCircle2, ChevronRight, X, ShieldAlert, Droplets
 } from 'lucide-react';
 import { apiUrl } from "@/lib/api";
+
+
 /* ─── Animated dashed route line ─── */
 const AnimatedRoute = ({ pct }: { pct: number }) => (
   <svg className="absolute inset-0 w-full h-full" style={{ top: 0, left: 0 }} preserveAspectRatio="none">
