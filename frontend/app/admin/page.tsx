@@ -1418,7 +1418,7 @@ function NGOManagement({ ngos, onOnboard, isEmpty }: NGOManagementProps) {
   }, [ngos]);
 const handleNgoVerify = async (ngoId: number, action: 'verify' | 'reject') => {
   try {
-    const res = await fetch(`http://localhost:8000/api/ngos/${ngoId}/verify/`, {
+      const res = await fetch(apiUrl(`/api/ngos/${ngoId}/verify/`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action })

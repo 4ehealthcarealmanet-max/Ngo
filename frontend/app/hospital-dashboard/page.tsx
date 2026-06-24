@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/lib/api";
 import {
   LayoutDashboard,
   Building2,
@@ -63,7 +64,7 @@ export default function HospitalDashboard() {
 
   const fetchRequests = (token: string) => {
     setRequestsLoading(true);
-    fetch(`http://localhost:8000/api/hospitals/my-requests/`, { headers: { Authorization: `Token ${token}` } })
+    fetch(apiUrl(`/api/hospitals/my-requests/`), { headers: { Authorization: `Token ${token}` } })
       .then(r => r.json()).then(d => { setBloodRequests(Array.isArray(d) ? d : []); setRequestsLoading(false); })
       .catch(() => setRequestsLoading(false));
   };
@@ -74,7 +75,7 @@ export default function HospitalDashboard() {
     const hospitalName = localStorage.getItem("hospital_name");
     if (!token || !hospitalId) { router.push("/"); return; }
 
-    fetch(`http://localhost:8000/api/hospitals/${hospitalId}/`, { headers: { Authorization: `Token ${token}` } })
+    fetch(apiUrl(`/api/hospitals/${hospitalId}/`), { headers: { Authorization: `Token ${token}` } })
       .then(r => r.json()).then(d => { setHospital(d); setEditForm(d); })
       .catch(() => setHospital({ id: Number(hospitalId), name: hospitalName || "Hospital", location: "", specialty: "", hospital_type: "", beds_available: 0, license_no: "", contact: "" }));
 
@@ -93,8 +94,8 @@ export default function HospitalDashboard() {
     const token = localStorage.getItem("hospital_token");
     const hospitalId = localStorage.getItem("hospital_id");
     try {
-      const res = await fetch(`http://localhost:8000/api/hospitals/${hospitalId}/`, {
-        method: "PATCH",
+const res = await fetch(apiUrl(`/api/hospitals/${hospitalId}/`), {      
+    method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
         body: JSON.stringify(editForm),
       });
@@ -108,8 +109,8 @@ export default function HospitalDashboard() {
     setRequestLoading(true);
     const token = localStorage.getItem("hospital_token");
     try {
-      const res = await fetch("http://localhost:8000/api/sos-requests/", {
-        method: "POST",
+const res = await fetch(apiUrl("/api/sos-requests/"), {      
+    method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
         body: JSON.stringify({ hospital_name: hospital?.name, ...requestForm }),
       });
