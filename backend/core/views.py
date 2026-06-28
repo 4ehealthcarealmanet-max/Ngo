@@ -353,7 +353,8 @@ class SOSRequestViewSet(viewsets.ModelViewSet):
             # 3. Email bhejo
             if donor.email:
                 try:
-                    base_url = "http://127.0.0.1:8000"
+                    #base_url = "http://127.0.0.1:8000"
+                    base_url = os.getenv("BACKEND_BASE_URL", "http://127.0.0.1:8000")
                     accept_link = f"{base_url}/api/donor/respond/?token={notification.id}&action=accept"
                     decline_link = f"{base_url}/api/donor/respond/?token={notification.id}&action=decline"
 
@@ -393,7 +394,7 @@ Thank you for being a life saver!
                         message=message,
                         from_email=settings.DEFAULT_FROM_EMAIL,
                         recipient_list=[donor.email],
-                        fail_silently=False,
+                        fail_silently=Truee,
                     )
 
                     notification.status = "Sent"
@@ -539,14 +540,8 @@ class DonorResponseView(APIView):
         units_required = sos_request.units_required
 
         if action == 'accept':
-            # Already accepted count check karo
-            accepted_count = Notification.objects.filter(
-                sos_request=sos_request,
-                status='Accepted'
-            ).count()
-
             # Already fulfilled?
-            if accepted_count >= units_required:
+            if sos_request.status == 'Matched':
                 return HttpResponse("""
                     <html><body style="font-family:Arial;text-align:center;padding:80px;background:#fefce8;">
                     <div style="max-width:400px;margin:auto;background:white;padding:40px;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
@@ -564,26 +559,16 @@ class DonorResponseView(APIView):
             notification.status = 'Accepted'
             notification.save()
 
-             # Donor automatically In Transit karo
+            # Donor automatically In Transit karo
             donor = notification.donor
             donor.status = 'In Transit'
             donor.hospital_name = sos_request.hospital_name
-            donor.units = sos_request.units_required
             donor.save()
-            # Naya accepted count
-            new_accepted_count = accepted_count + 1
 
-            # Units poori ho gayi?
-            if new_accepted_count >= units_required:
-                # Baaki sab Sent notifications expire karo
-                Notification.objects.filter(
-                    sos_request=sos_request,
-                    status='Sent'
-                ).update(status='Expired')
-
-                # SOS Request status update
-                sos_request.status = 'Matched'
-                sos_request.save()
+            # Pehla accept hi Matched kar dega
+            Notification.objects.filter(sos_request=sos_request, status='Sent').update(status='Expired')
+            sos_request.status = 'Matched'
+            sos_request.save()
 
             return HttpResponse(f"""
                 <html><body style="font-family:Arial;text-align:center;padding:80px;background:#f0fdf4;">
@@ -598,7 +583,7 @@ class DonorResponseView(APIView):
                 <div style="margin-top:15px;padding:10px;background:#f8fafc;border-radius:10px;">
                 <p style="margin:0;color:#94a3b8;font-size:13px;">
                 Hospital: {sos_request.hospital_name}<br/>
-                Donors Confirmed: {new_accepted_count}/{units_required}
+                Status: Confirmed
                 </p>
                 </div>
                 </div></body></html>

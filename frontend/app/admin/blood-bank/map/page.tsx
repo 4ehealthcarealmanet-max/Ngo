@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from "@/lib/api";
 import dynamic from 'next/dynamic';
 import { Search, Navigation, Droplets, ShieldAlert, X, CheckCircle2, AlertTriangle, Building2, Droplet } from 'lucide-react';
 //import 'leaflet/dist/leaflet.css';
@@ -77,7 +78,8 @@ export default function DonorMap() {
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
 
   // --- SOS Broadcast (Red Button) ---
-  const API_BASE = "http://127.0.0.1:8000/api";
+  //const API_BASE = "http://127.0.0.1:8000/api";
+  const API_BASE = apiUrl("/api");
   const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
   const [sosModalOpen, setSosModalOpen] = useState(false);
   const [hospitals, setHospitals] = useState<any[]>([]);

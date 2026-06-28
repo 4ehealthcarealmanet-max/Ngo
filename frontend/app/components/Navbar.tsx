@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { useRouter } from "next/navigation";
-
+import { apiUrl } from "@/lib/api";
 export default function Navbar() {
   const router = useRouter();
   const [isSignInOpen, setIsSignInOpen] = useState(false);
@@ -31,8 +31,7 @@ const handleLoginSubmit = async (e: React.FormEvent) => {
 
   // Hospital login API
   try {
-    const res = await fetch('http://localhost:8000/api/hospitals/login/', {
-      method: 'POST',
+const res = await fetch(apiUrl("/api/hospitals/login/"), {      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     })
@@ -74,8 +73,7 @@ const handleHospitalRegister = async (e) => {
   setHospitalError('')
   
   try {
-    const res = await fetch('http://localhost:8000/api/hospitals/register/', {
-      method: 'POST',
+const res = await fetch(apiUrl("/api/hospitals/register/"), {      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(hospitalForm)
     })
@@ -112,8 +110,7 @@ const handleNgoRegister = async (e: React.FormEvent) => {
   setNgoError('')
 
   try {
-    const res = await fetch('http://localhost:8000/api/ngos/register/', {
-      method: 'POST',
+const res = await fetch(apiUrl("/api/ngos/register/"), {      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ngoForm)
     })
