@@ -146,13 +146,17 @@ const GlobalEventMap = dynamic(() => import("./components/GlobalEventMap"), { ss
 async function fetchJsonOrNull<T>(url: string): Promise<T | null> {
   try {
     const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`[fetchJsonOrNull] HTTP ${res.status} ${res.statusText} — ${url}`);
+      return null;
+    }
 
     const contentType = res.headers.get("content-type") ?? "";
     if (!contentType.toLowerCase().includes("application/json")) return null;
 
     return (await res.json()) as T;
-  } catch {
+  } catch (err) {
+    console.error(`[fetchJsonOrNull] Network/parse error — ${url}`, err);
     return null;
   }
 }

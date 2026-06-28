@@ -9,3 +9,4 @@ export function apiUrl(path: string): string {
   return `${apiBaseUrl}${normalizedPath}`;
 }
 
+

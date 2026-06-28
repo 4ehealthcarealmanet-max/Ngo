@@ -62,6 +62,9 @@ export default function SOSControlRoom() {
     } catch { alert("Failed to cancel broadcast."); }
   };
 
+  const activeRequestIds = requests.filter((r: any) => r.status === "Broadcasting").map((r: any) => r.id);
+  const activeNotifications = notifications.filter((n: any) => activeRequestIds.includes(n.sos_request));
+
   return (
     <div className="p-8 bg-[#F1F5F9] min-h-screen font-sans">
       {/* Header */}
@@ -162,7 +165,7 @@ export default function SOSControlRoom() {
               {/* Live stats */}
               <div className="flex items-center gap-3">
                 {(['Pending','Accepted','Rejected'] as const).map((s) => {
-                  const count = notifications.filter((n: any) => n?.status === s).length;
+                  const count = activeNotifications.filter((n: any) => n?.status === s).length;
                   const cfg = statusConfig[s];
                   return count > 0 ? (
                     <span key={s} className={`text-[10px] font-black px-3 py-1 rounded-xl ${cfg.className}`}>
@@ -174,7 +177,7 @@ export default function SOSControlRoom() {
             </div>
 
             <div className="overflow-x-auto">
-              {notifications.length === 0 ? (
+              {activeNotifications.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-slate-300 font-black italic uppercase tracking-widest text-sm">No Active Transmissions</p>
                 </div>
@@ -189,7 +192,7 @@ export default function SOSControlRoom() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {notifications.map((notif: any) => {
+                    {activeNotifications.map((notif: any) => {
                       const cfg = statusConfig[notif.status] ?? statusConfig['Pending'];
                       return (
                         <tr key={notif.id} className="group hover:bg-slate-50/50 transition-colors">
