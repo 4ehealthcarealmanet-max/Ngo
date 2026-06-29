@@ -120,7 +120,8 @@ if (donorRes.ok) {
 }
 
     // Step 2: Donation create karo
-    const donationRes = await fetch(`api/donations/`, {
+    //const donationRes = await fetch(`api/donations/`, {
+    const donationRes = await fetch(apiUrl("/api/donations/"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

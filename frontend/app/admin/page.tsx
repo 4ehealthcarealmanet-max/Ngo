@@ -22,6 +22,7 @@ import {
   X,
   Eye,
   ChevronRight,
+    BookOpen,
 } from 'lucide-react';
 
 interface NGO {
@@ -191,6 +192,7 @@ const sidebarItems = [
   { tab: "verification_queue", name: "Verification Queue", icon: ClipboardCheck },
   { tab: "blood_bank", name: "Blood Bank", icon: Heart }, // <--- Naya Item
   { tab: "donor", name: "Donor Database", icon: Heart },
+  { tab: "workshops", name: "Workshop Management", icon: BookOpen },
   { tab: "map", name: "Global Event Map", icon: MapIcon },
   { tab: "logs", name: "System Logs", icon: Settings },
 ] as const;
@@ -1007,6 +1009,91 @@ function PatientsTable({ isLoading, patients, ngos, onViewId }: PatientsTablePro
   );
 }
 
+function WorkshopManagement({ workshops, onWorkshopAdded, onWorkshopDeleted }: {
+  workshops: Workshop[];
+  onWorkshopAdded: (w: Workshop) => void;
+  onWorkshopDeleted: (id: number) => void;
+}) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [form, setForm] = useState({ title: "", date: "", description: "", expert_name: "", status: "Open" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAdd = async () => {
+    if (!form.title || !form.date) { setError("Title aur Date required hai."); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(apiUrl("/api/workshops/"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const newW = await res.json();
+      onWorkshopAdded(newW);
+      setForm({ title: "", date: "", description: "", expert_name: "", status: "Open" });
+      setIsAdding(false);
+      setError(null);
+    } catch { setError("Workshop add nahi ho saki. Try again."); }
+    finally { setLoading(false); }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure?")) return;
+    try {
+      await fetch(apiUrl(`/api/workshops/${id}/`), { method: "DELETE" });
+      onWorkshopDeleted(id);
+    } catch { alert("Delete failed."); }
+  };
+
+  return (
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">Workshop Management</h1>
+          <p className="text-sm text-slate-500">Add, view, and remove workshops.</p>
+        </div>
+        <button onClick={() => setIsAdding(!isAdding)} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700">
+          {isAdding ? "Cancel" : "+ Add Workshop"}
+        </button>
+      </div>
+
+      {isAdding && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
+          <h2 className="font-black text-slate-800">New Workshop</h2>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <input className="w-full border rounded-xl px-4 py-2 text-sm" placeholder="Title*" value={form.title} onChange={e => setForm(s => ({ ...s, title: e.target.value }))} />
+          <input className="w-full border rounded-xl px-4 py-2 text-sm" placeholder="Expert Name" value={form.expert_name} onChange={e => setForm(s => ({ ...s, expert_name: e.target.value }))} />
+          <input type="date" className="w-full border rounded-xl px-4 py-2 text-sm" value={form.date} onChange={e => setForm(s => ({ ...s, date: e.target.value }))} />
+          <textarea className="w-full border rounded-xl px-4 py-2 text-sm" placeholder="Description" value={form.description} onChange={e => setForm(s => ({ ...s, description: e.target.value }))} />
+          <select className="w-full border rounded-xl px-4 py-2 text-sm" value={form.status} onChange={e => setForm(s => ({ ...s, status: e.target.value }))}>
+            <option value="Open">Open</option>
+            <option value="Closed">Closed</option>
+            <option value="Upcoming">Upcoming</option>
+          </select>
+          <button onClick={handleAdd} disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 disabled:opacity-50">
+            {loading ? "Saving..." : "Save Workshop"}
+          </button>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {workshops.length === 0 && <p className="text-slate-400 text-sm">No workshops found.</p>}
+        {workshops.map(w => (
+          <div key={w.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between">
+            <div>
+              <p className="font-black text-slate-900">{w.title}</p>
+              <p className="text-sm text-slate-500">Expert: {w.expert_name ?? "—"} • Date: {w.date} • Status: {w.is_open ? "Open" : "Closed"}</p>
+            </div>
+            <button onClick={() => handleDelete(w.id)} className="text-red-500 hover:text-red-700 font-bold text-sm px-3 py-1 border border-red-200 rounded-xl hover:bg-red-50">
+              Delete
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 type DashboardOverviewProps = {
   isLoading: boolean;
   adminCards: Array<{
@@ -3900,7 +3987,13 @@ export default function AdminDashboardPage() {
               donations={ecosystemData.donations}
               customEntries={customSystemLogs}
             />
-          ) :
+          ) : activeTab === "workshops" ? (
+            <WorkshopManagement
+              workshops={ecosystemData.workshops}
+              onWorkshopAdded={(w) => setEcosystemData((prev) => ({ ...prev, workshops: [w, ...prev.workshops] }))}
+              onWorkshopDeleted={(id) => setEcosystemData((prev) => ({ ...prev, workshops: prev.workshops.filter((w) => w.id !== id) }))}
+            />
+          ) :
            (
             <div className="p-8 space-y-3">
               <h1 className="text-2xl font-black text-slate-900">
