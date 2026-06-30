@@ -19,7 +19,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from .models import SOSRequest
-
+from .email_utils import send_email_brevo
 import os
 
 from .models import (
@@ -329,7 +329,7 @@ class SOSRequestViewSet(viewsets.ModelViewSet):
 
         # 1. Matching available donors dhundo
         donors = VolunteerDonor.objects.filter(
-            blood_group__icontains=blood_needed,
+            blood_group=blood_needed,
             is_available=True
         )
 
@@ -390,18 +390,20 @@ Thank you for being a life saver!
   (This is an automated alert. Please do not reply to this email.)
                     """
 
-                    send_mail(
+                    success, info = send_email_brevo(
+                        to_email=donor.email,
+                        to_name=donor.name,
                         subject=subject,
-                        message=message,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[donor.email],
-                        fail_silently=Truee,
+                        html_content=message.replace("\n", "<br>")
                     )
-
-                    notification.status = "Sent"
-                    notification.save()
-                    success_count += 1
-                    print(f"Email sent to {donor.name} ({donor.email})")
+                    if success:
+                        notification.status = "Sent"
+                        notification.save()
+                        success_count += 1
+                        print(f"Email sent to {donor.name} ({donor.email})")
+                    else:
+                        print(f"Email failed for {donor.name}: {info}")
+                        failed_count += 1
 
                 except Exception as e:
                     print(f"Email failed for {donor.name}: {e}")
