@@ -9,6 +9,7 @@ dj-database-url==3.1.0
 psycopg2-binary==2.9.11
 gunicorn==25.3.0
 whitenoise==6.11.0
+requests==2.32.3
 
 # Windows-only helper (ignored on Linux/Deployment)
 pywin32==311; sys_platform == 'win32'
