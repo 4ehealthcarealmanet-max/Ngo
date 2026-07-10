@@ -8,6 +8,19 @@ import {
 import { apiUrl } from "@/lib/api";
 
 
+/* ─── Haversine formula: 2 GPS points ke beech real-world distance (km mein) ─── */
+const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLng = (lng2 - lng1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 /* ─── Animated dashed route line ─── */
 const AnimatedRoute = ({ pct }: { pct: number }) => (
   <svg className="absolute inset-0 w-full h-full" style={{ top: 0, left: 0 }} preserveAspectRatio="none">
@@ -61,6 +74,7 @@ const LiveTracking = () => {
   const [now, setNow] = useState(() => Date.now());
   const lastDeliveriesJson = useRef<string>("");
   const lastLogsJson = useRef<string>("");
+  const initialDistances = useRef<{ [key: string]: number }>({});
 
   useEffect(() => {
     const fetchLiveTracking = async () => {
@@ -117,16 +131,38 @@ const LiveTracking = () => {
     return arr;
   }, [logs]);
 
+  const AVERAGE_SPEED_KMH = 30;
+
   const calcProgress = (delivery: any) => {
-    const start = delivery?.mission_started_at ? Date.parse(delivery.mission_started_at) : null;
-    if (!start || Number.isNaN(start)) return { pct: 20, etaMins: 15, etaSecs: 0 };
-    const windowMs = 15 * 60 * 1000;
-    const elapsed = Math.max(0, now - start);
-    const pct = Math.max(0, Math.min(100, Math.round((elapsed / windowMs) * 100)));
-    const remaining = Math.max(0, windowMs - elapsed);
-    const etaMins = Math.floor(remaining / 60000);
-    const etaSecs = Math.floor((remaining % 60000) / 1000);
-    return { pct, etaMins, etaSecs };
+    const donorLat = parseFloat(delivery?.lat);
+    const donorLng = parseFloat(delivery?.lng);
+    const hospLat = parseFloat(delivery?.hospital_lat);
+    const hospLng = parseFloat(delivery?.hospital_lng);
+
+    const hasValidCoords =
+      !Number.isNaN(donorLat) && !Number.isNaN(donorLng) &&
+      !Number.isNaN(hospLat) && !Number.isNaN(hospLng);
+
+    if (!hasValidCoords) {
+      return { pct: 20, etaMins: 15, etaSecs: 0, distanceKm: null };
+    }
+
+    const currentDistance = getDistanceKm(donorLat, donorLng, hospLat, hospLng);
+
+    const key = String(delivery.id);
+    if (initialDistances.current[key] === undefined) {
+      initialDistances.current[key] = currentDistance;
+    }
+    const initialDistance = initialDistances.current[key] || currentDistance || 0.001;
+
+    const traveled = Math.max(0, initialDistance - currentDistance);
+    const pct = Math.max(0, Math.min(100, Math.round((traveled / initialDistance) * 100)));
+
+    const etaTotalMins = (currentDistance / AVERAGE_SPEED_KMH) * 60;
+    const etaMins = Math.max(0, Math.floor(etaTotalMins));
+    const etaSecs = Math.max(0, Math.floor((etaTotalMins - etaMins) * 60));
+
+    return { pct, etaMins, etaSecs, distanceKm: currentDistance };
   };
 
   const markAsDelivered = async () => {
