@@ -62,11 +62,33 @@ const [hospitalForm, setHospitalForm] = useState({
   specialty: '',
   email: '',
   password: '',
+  latitude: '',
+  longitude: '',
 })
 const [hospitalLoading, setHospitalLoading] = useState(false)
 const [hospitalError, setHospitalError] = useState('')
 const [hospitalSuccess, setHospitalSuccess] = useState(false)
+const [locationCaptured, setLocationCaptured] = useState(false)
 
+const captureLocation = () => {
+    if (!navigator.geolocation) {
+      setHospitalError('Geolocation not supported by your browser')
+      return
+    }
+    setHospitalError('')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setHospitalForm(prev => ({
+          ...prev,
+          lat: pos.coords.latitude.toFixed(6),
+          lng: pos.coords.longitude.toFixed(6)
+        }))
+        setLocationCaptured(true)
+      },
+      (err) => setHospitalError('Location access denied: ' + err.message),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
 const handleHospitalRegister = async (e) => {
   e.preventDefault()
   setHospitalLoading(true)
@@ -479,6 +501,13 @@ const res = await fetch(apiUrl("/api/ngos/register/"), {      method: 'POST',
               onChange={(e) => setHospitalForm({...hospitalForm, location: e.target.value})}
               className="w-full rounded-2xl bg-slate-50 border-2 border-transparent px-6 py-4 text-base font-bold text-slate-900 outline-none focus:border-blue-600 focus:bg-white transition-all shadow-sm placeholder:text-slate-400" 
             />
+            <button
+                type="button"
+                onClick={captureLocation}
+                className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                📍 {locationCaptured ? 'Location captured ✓' : 'Use my current location'}
+              </button>
           </div>
           <div className="space-y-3">
             <label className="block text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Contact</label>
