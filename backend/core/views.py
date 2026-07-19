@@ -1,3 +1,4 @@
+from math import radians, sin, cos, sqrt, atan2
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics
@@ -20,7 +21,23 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from .models import SOSRequest
 from .email_utils import send_email_brevo
+from rest_framework.permissions import AllowAny
 import os
+
+
+def calculate_distance_km(lat1, lng1, lat2, lng2):
+    if not all([lat1, lng1, lat2, lng2]):
+        return 0.0
+    try:
+        lat1, lng1, lat2, lng2 = map(radians, [float(lat1), float(lng1), float(lat2), float(lng2)])
+        dlat = lat2 - lat1
+        dlng = lng2 - lng1
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlng/2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return round(6371 * c, 1)
+    except (TypeError, ValueError):
+        return 0.0
+
 
 from .models import (
     Hospital,
@@ -336,6 +353,10 @@ class SOSRequestViewSet(viewsets.ModelViewSet):
         if not donors.exists():
             return Response({"status": "error", "message": "No donors found!"})
 
+        hospital_obj = Hospital.objects.filter(name__iexact=sos_request.hospital_name).only("lat", "lng").first()
+        hospital_lat = hospital_obj.lat if hospital_obj else None
+        hospital_lng = hospital_obj.lng if hospital_obj else None
+
         success_count = 0
         failed_count = 0
 
@@ -347,7 +368,7 @@ class SOSRequestViewSet(viewsets.ModelViewSet):
                 defaults={
                     'message': f"Emergency: {blood_needed} at {sos_request.hospital_name}",
                     'status': 'Pending',
-                    'distance_km': 1.5
+                    'distance_km': calculate_distance_km(donor.lat, donor.lng, hospital_lat, hospital_lng)
                 }
             )
 
@@ -589,6 +610,39 @@ class DonorResponseView(APIView):
                 Status: Confirmed
                 </p>
                 </div>
+                <p id="locStatus" style="margin-top:20px;color:#94a3b8;font-size:13px;">📍 Sharing your live location...</p>
+                <p style="margin-top:10px;color:#6b7280;font-size:12px;">Sharing your live location helps the hospital track your arrival and coordinate faster. Please allow location access when your browser asks.</p>
+                </div>
+
+                <script>
+function sendLocation() {{
+    if (!navigator.geolocation) {{
+        document.getElementById('locStatus').innerText = 'Location not supported on this browser';
+        return;
+    }}
+    navigator.geolocation.getCurrentPosition(function(pos) {{
+        fetch('/api/donor/update-location/', {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{
+                donor_id: {donor.id},
+                lat: pos.coords.latitude.toFixed(6),
+                lng: pos.coords.longitude.toFixed(6)
+            }})
+        }}).then(function(res) {{
+            if (res.ok) {{
+                document.getElementById('locStatus').innerText = '✅ Live location shared with hospital';
+            }} else {{
+                document.getElementById('locStatus').innerText = '⚠️ Could not share location';
+            }}
+        }});
+    }}, function(err) {{
+        document.getElementById('locStatus').innerText = '⚠️ Location permission denied. Please enable location access in your browser settings and refresh this page so the hospital can track your arrival.';
+    }});
+}}
+sendLocation();
+setInterval(sendLocation, 30000);
+                </script>
                 </div></body></html>
             """)
 
@@ -606,6 +660,27 @@ class DonorResponseView(APIView):
             """)
 
         return HttpResponse("<h2>Invalid action</h2>", status=400)
+
+class UpdateDonorLocationView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        donor_id = request.data.get('donor_id')
+        lat = request.data.get('lat')
+        lng = request.data.get('lng')
+
+        if not donor_id or lat is None or lng is None:
+            return Response({"error": "Missing data"}, status=400)
+
+        try:
+            donor = VolunteerDonor.objects.get(id=donor_id)
+            donor.lat = lat
+            donor.lng = lng
+            donor.save()
+            return Response({"success": True})
+        except VolunteerDonor.DoesNotExist:
+            return Response({"error": "Donor not found"}, status=404)
 
 class DonorViewSet(viewsets.ModelViewSet):
     queryset = Donor.objects.all().order_by('-created_at')

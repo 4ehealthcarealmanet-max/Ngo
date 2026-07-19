@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import VolunteerDonorViewSet
-from .views import DonorResponseView
+from .views import DonorResponseView, UpdateDonorLocationView
 from .views import WorkshopListCreateView, WorkshopDetailView
 from .views import (
     #BloodDonationViewSet,
@@ -51,6 +51,8 @@ urlpatterns = [
     path('mission-logs/', MissionLogsAPI.as_view(), name='mission-logs'),
 
     path('donor/respond/', DonorResponseView.as_view(), name='donor-respond'),
+
+    path('donor/update-location/', UpdateDonorLocationView.as_view(), name='donor-update-location'),
 
     path('workshops/', WorkshopListCreateView.as_view(), name='workshop-list'),
 path('workshops/<int:pk>/', WorkshopDetailView.as_view(), name='workshop-detail'),

@@ -6,6 +6,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 # models.py ke top mein ye add karo
 from django.contrib.auth.models import User
+from .email_utils import send_email_brevo
 def generate_referral_id():
     # Example: REF-20260331-1A2B3C
     return f"REF-{timezone.now():%Y%m%d}-{secrets.token_hex(3).upper()}"
@@ -120,6 +121,8 @@ class Hospital(models.Model):
     is_approved = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
+    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     class Meta:
         db_table = "NGO_Hospitals"
@@ -332,7 +335,7 @@ class BloodMatch(models.Model):
     contact = models.CharField(max_length=15)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __clstr__(self):
+    def __str__(self):
         return self.reference_id
 
 class ActivityLog(models.Model):
@@ -383,6 +386,37 @@ def donor_notification_status_sync(sender, instance, created, **kwargs):
             latest_pending.status = "Accepted"
             latest_pending.save(update_fields=["status"])
 
+    if instance.status == "Completed":
+        if instance.email:
+            try:
+                subject = "🙏 Thank You for Saving a Life!"
+                message = f"""
+Dear {instance.name},
+
+Thank you so much for donating blood at {instance.hospital_name or 'the hospital'}!
+
+Your generous contribution of {instance.units} unit(s) of {instance.blood_group} blood 
+will help save a life. We deeply appreciate your kindness and willingness to help 
+someone in their time of need.
+
+You are a true life saver! ❤️
+
+- SOS Radar Emergency Blood Network
+(This is an automated message. Please do not reply to this email.)
+                """
+                success, info = send_email_brevo(
+                    to_email=instance.email,
+                    to_name=instance.name,
+                    subject=subject,
+                    html_content=message.replace("\n", "<br>")
+                )
+                if success:
+                    print(f"Thank you email sent to {instance.name} ({instance.email})")
+                else:
+                    print(f"Thank you email failed for {instance.name}: {info}")
+            except Exception as e:
+                print(f"Thank you email error for {instance.name}: {e}")
+
 # 2. Jab koi SOS Request aaye
 @receiver(post_save, sender=SOSRequest)
 def sos_activity_log(sender, instance, created, **kwargs):
@@ -394,7 +428,7 @@ def sos_activity_log(sender, instance, created, **kwargs):
 @receiver(post_save, sender=BloodMatch)
 def match_activity_log(sender, instance, created, **kwargs):
     if created:
-        ActivityLog.objects.create(message=f"Match Found: {instance.blood_group} for {instance.patient_name}")
+        ActivityLog.objects.create(message=f"Match Found: {instance.blood_group} for {instance.donor_name}")
 
 
 class Donor(models.Model):

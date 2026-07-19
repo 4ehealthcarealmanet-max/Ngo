@@ -142,6 +142,7 @@ elif database_url:
             ssl_require=env_bool("DJANGO_DB_SSL_REQUIRE", default=True),
         )
     }
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 else:
     db_engine = os.getenv("DJANGO_DB_ENGINE")
     if db_engine:
@@ -153,6 +154,7 @@ else:
                 "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", ""),
                 "HOST": os.getenv("DJANGO_DB_HOST", ""),
                 "PORT": os.getenv("DJANGO_DB_PORT", ""),
+                'DISABLE_SERVER_SIDE_CURSORS': True, 
             }
         }
     else:
