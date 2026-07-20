@@ -123,7 +123,7 @@ class HospitalRegistrationSerializer(serializers.ModelSerializer):
         fields = [
             'name', 'license_no', 'location', 
             'hospital_type', 'specialty', 
-            'contact', 'beds_available',
+            'contact', 'beds_available', 'lat', 'lng', 
             'email', 'password'
         ]
 
@@ -146,6 +146,10 @@ class HospitalRegistrationSerializer(serializers.ModelSerializer):
         )
         return hospital
 
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered!")
+        return value
 
 class HospitalSerializer(serializers.ModelSerializer):
     class Meta:
@@ -153,39 +157,6 @@ class HospitalSerializer(serializers.ModelSerializer):
         fields = "__all__"
 from django.contrib.auth.models import User
 
-class HospitalRegistrationSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(write_only=True)
-    password = serializers.CharField(write_only=True)
-
-    class Meta:
-        model = Hospital
-        fields = [
-            'name', 'license_no', 'location', 
-            'hospital_type', 'specialty', 
-            'contact', 'beds_available',
-            'email', 'password'
-        ]
-
-    def create(self, validated_data):
-        email = validated_data.pop('email')
-        password = validated_data.pop('password')
-
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password
-        )
-
-        hospital = Hospital.objects.create(
-            user=user,
-            is_approved=False,
-            **validated_data
-        )
-        return hospital
-def validate_email(self, value):
-    if User.objects.filter(email=value).exists():
-        raise serializers.ValidationError("This email is already registered!")
-    return value
 
 class ReferralSerializer(serializers.ModelSerializer):
     to_hospital_details = HospitalSerializer(source="to_hospital", read_only=True)
@@ -301,6 +272,8 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
     hospital_name = serializers.SerializerMethodField()
     units = serializers.SerializerMethodField()
     volume = serializers.SerializerMethodField()
+    hospital_lat = serializers.SerializerMethodField()
+    hospital_lng = serializers.SerializerMethodField()
 
     class Meta:
         model = VolunteerDonor
@@ -308,7 +281,8 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'reference_id', 'donor_name', 
             'blood_group', 'hospital_name', 'units', 'volume', 
-            'status', 'city', 'lat', 'lng', 'is_available','whatsapp_consent', 'is_approved', 'email'
+            'status', 'city', 'lat', 'lng', 'is_available','whatsapp_consent', 'is_approved', 'email',
+            'hospital_lat', 'hospital_lng'
         ]
 
     def get_reference_id(self, obj):
@@ -323,11 +297,46 @@ class VolunteerDonorSerializer(serializers.ModelSerializer):
     def get_volume(self, obj):
         return getattr(obj, 'units', 1)
 
+    def get_hospital_lat(self, obj):
+        hospital = Hospital.objects.filter(name__iexact=obj.hospital_name).only("lat").first()
+        return hospital.lat if hospital else None
+
+    def get_hospital_lng(self, obj):
+        hospital = Hospital.objects.filter(name__iexact=obj.hospital_name).only("lng").first()
+        return hospital.lng if hospital else None
+
 
 class SOSRequestSerializer(serializers.ModelSerializer):
+    distance = serializers.SerializerMethodField()
+
     class Meta:
         model = SOSRequest
         fields = '__all__'
+
+    def get_distance(self, obj):
+        from math import radians, sin, cos, sqrt, atan2
+        request = self.context.get('request')
+        if not request:
+            return None
+        try:
+            lat1 = float(request.query_params.get('lat') or 0)
+            lng1 = float(request.query_params.get('lng') or 0)
+        except (TypeError, ValueError):
+            return None
+        if not lat1 or not lng1:
+            return None
+        hospital = Hospital.objects.filter(name__iexact=obj.hospital_name).only('lat', 'lng').first()
+        if not hospital or not hospital.lat or not hospital.lng:
+            return None
+        try:
+            lat1, lng1, lat2, lng2 = map(radians, [lat1, lng1, float(hospital.lat), float(hospital.lng)])
+            dlat = lat2 - lat1
+            dlng = lng2 - lng1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlng/2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1 - a))
+            return round(6371 * c, 1)
+        except (TypeError, ValueError):
+            return None
 
 class NotificationSerializer(serializers.ModelSerializer):
     # In lines se donor ka naam aur phone number bhi API mein dikhne lagega
