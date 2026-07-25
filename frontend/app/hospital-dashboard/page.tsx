@@ -150,7 +150,7 @@ const res = await fetch(apiUrl("/api/sos-requests/"), {
         
         {/* Logo */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between h-16">
-          {sidebarOpen && <img src="/pathyatech-Logo.png" alt="PathyaTech" className="h-8 w-auto" />}
+          {sidebarOpen && <img src="/pathyatech-logo.png" alt="PathyaTech" className="h-8 w-auto" />}
           <button onClick={() => setSidebarOpen(!sidebarOpen)}
             className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors ml-auto flex-shrink-0">
             {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}

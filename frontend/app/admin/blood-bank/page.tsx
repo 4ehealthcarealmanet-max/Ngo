@@ -128,7 +128,7 @@ export default function SOSControlRoom() {
                             <AlertCircle size={14} className={isBroadcasting ? 'text-emerald-500' : 'text-rose-600'} /> {req.units_required} Units Required
                           </div>
                           <div className="flex items-center gap-2 text-slate-400 font-bold text-xs underline decoration-dotted">
-                            <MapPin size={14} /> {req.distance || '2.5'} KM Range
+                            <MapPin size={14} /> {req.distance ? `${req.distance} KM` : 'Location pending'} Range
                           </div>
                         </div>
                       </div>
@@ -200,7 +200,7 @@ export default function SOSControlRoom() {
                             <p className="font-black text-slate-800 text-sm">{notif.donor_name}</p>
                           </td>
                           <td className="py-5 text-slate-500 font-bold text-xs italic">{notif.hospital_name}</td>
-                          <td className="py-5 font-black text-rose-600 text-sm">{notif.distance_km} KM</td>
+                          <td className="py-5 font-black text-rose-600 text-sm">{notif.distance_km > 0 ? `${notif.distance_km} KM` : 'Awaiting location'}</td>
                           <td className="py-5 text-right pr-4">
                             <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-black tracking-widest ${cfg.className}`}>
                               {/* Status dot */}

@@ -93,7 +93,13 @@ const handleHospitalRegister = async (e) => {
   e.preventDefault()
   setHospitalLoading(true)
   setHospitalError('')
-  
+
+  if (!hospitalForm.lat || !hospitalForm.lng) {
+    setHospitalError('Please click "Use my current location" to share your hospital\'s location before registering.')
+    setHospitalLoading(false)
+    return
+  }
+
   try {
 const res = await fetch(apiUrl("/api/hospitals/register/"), {      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -105,7 +111,7 @@ const res = await fetch(apiUrl("/api/hospitals/register/"), {      method: 'POST
     if (res.ok) {
       setHospitalSuccess(true)
     } else {
-      setHospitalError(data.email?.[0] || data.license_no?.[0] || 'Something went wrong!')
+      setHospitalError(data.email?.[0] || data.license_no?.[0] || data.lat?.[0] || data.lng?.[0] || 'Something went wrong!')
     }
   } catch (err) {
     setHospitalError('Server se connect nahi ho pa raha!')
@@ -249,7 +255,7 @@ const res = await fetch(apiUrl("/api/ngos/register/"), {      method: 'POST',
       {/* Logo */}
       <div className="text-center mb-10">
         <div className="mx-auto flex h-20 w-auto items-center justify-center mb-6">
-          <img src="/pathyatech-Logo.png" alt="PathyaTech Logo" draggable={false} />
+          <img src="/pathyatech-logo.png" alt="PathyaTech Logo" draggable={false} />
         </div>
       </div>
 

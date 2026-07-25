@@ -353,9 +353,11 @@ class SOSRequestViewSet(viewsets.ModelViewSet):
         if not donors.exists():
             return Response({"status": "error", "message": "No donors found!"})
 
-        hospital_obj = Hospital.objects.filter(name__iexact=sos_request.hospital_name).only("lat", "lng").first()
+        hospital_obj = Hospital.objects.filter(name__iexact=sos_request.hospital_name).only("lat", "lng", "contact", "location").first()
         hospital_lat = hospital_obj.lat if hospital_obj else None
         hospital_lng = hospital_obj.lng if hospital_obj else None
+        hospital_contact = hospital_obj.contact if hospital_obj else "Not available"
+        hospital_address = hospital_obj.location if hospital_obj else "Not available"
 
         success_count = 0
         failed_count = 0
@@ -393,6 +395,8 @@ DETAILS:
 ━━━━━━━━━━━━━━━━━━━━
 Blood Group Required : {blood_needed}
 Hospital             : {sos_request.hospital_name}
+Hospital Address      : {hospital_address}
+Hospital Contact      : {hospital_contact}
 Patient Name         : {sos_request.patient_name}
 Units Required       : {sos_request.units_required}
 ━━━━━━━━━━━━━━━━━━━━
@@ -404,6 +408,8 @@ PLEASE RESPOND:
 
 ❌ DECLINE - Click here to decline:
 {decline_link}
+
+Note: Hospital staff will verify your eligibility before donation.
 
 Thank you for being a life saver!
 
