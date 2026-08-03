@@ -1,4 +1,3 @@
-from math import radians, sin, cos, sqrt, atan2
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics
@@ -23,20 +22,7 @@ from .models import SOSRequest
 from .email_utils import send_email_brevo
 from rest_framework.permissions import AllowAny
 import os
-
-
-def calculate_distance_km(lat1, lng1, lat2, lng2):
-    if not all([lat1, lng1, lat2, lng2]):
-        return 0.0
-    try:
-        lat1, lng1, lat2, lng2 = map(radians, [float(lat1), float(lng1), float(lat2), float(lng2)])
-        dlat = lat2 - lat1
-        dlng = lng2 - lng1
-        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlng/2)**2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return round(6371 * c, 1)
-    except (TypeError, ValueError):
-        return 0.0
+from .utils import calculate_distance_km
 
 
 from .models import (
@@ -382,46 +368,118 @@ class SOSRequestViewSet(viewsets.ModelViewSet):
                     accept_link = f"{base_url}/api/donor/respond/?token={notification.id}&action=accept"
                     decline_link = f"{base_url}/api/donor/respond/?token={notification.id}&action=decline"
 
-                    subject = f"🆘 URGENT - {blood_needed} Blood Needed at {sos_request.hospital_name}"
+                    subject = f"Blood Donation Request — {blood_needed} needed at {sos_request.hospital_name}"
 
-                    message = f"""
-URGENT BLOOD REQUEST - SOS RADAR
+                    html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
-Dear {donor.name},
+        <!-- Header -->
+        <tr>
+          <td style="background:#dc2626;padding:28px 40px;text-align:center;">
+            <p style="margin:0;color:#fecaca;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;">SOS Radar &mdash; Emergency Blood Network</p>
+            <h1 style="margin:8px 0 0;color:#ffffff;font-size:26px;font-weight:800;letter-spacing:-0.02em;">Blood Donation Request</h1>
+          </td>
+        </tr>
 
-A hospital near you urgently needs blood. Please respond as soon as possible.
+        <!-- Body -->
+        <tr>
+          <td style="padding:36px 40px;">
 
-DETAILS:
-━━━━━━━━━━━━━━━━━━━━
-Blood Group Required : {blood_needed}
-Hospital             : {sos_request.hospital_name}
-Hospital Address      : {hospital_address}
-Hospital Contact      : {hospital_contact}
-Patient Name         : {sos_request.patient_name}
-Units Required       : {sos_request.units_required}
-━━━━━━━━━━━━━━━━━━━━
+            <!-- Greeting -->
+            <p style="margin:0 0 8px;font-size:16px;color:#1e293b;font-weight:700;">Dear {donor.name},</p>
+            <p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.6;">Every 2 seconds, someone in India needs blood. Your response could make the difference for <strong>{sos_request.patient_name}</strong>. A verified hospital in your area has raised an urgent request — please take a moment to review the details below.</p>
 
-PLEASE RESPOND:
+            <!-- Blood group badge -->
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:inline-block;width:100%;box-sizing:border-box;">
+              <p style="margin:0;font-size:12px;color:#dc2626;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Blood Group Required</p>
+              <p style="margin:4px 0 0;font-size:36px;font-weight:900;color:#dc2626;letter-spacing:-0.03em;">{blood_needed}</p>
+            </div>
 
-✅ ACCEPT - Click here to accept:
-{accept_link}
+            <!-- Details table -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border-collapse:collapse;">
+              <tr>
+                <td colspan="2" style="padding:10px 0 6px;border-bottom:2px solid #f1f5f9;">
+                  <p style="margin:0;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.12em;">Request Details</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b;font-weight:600;width:45%;">Hospital</td>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;font-weight:700;">{sos_request.hospital_name} &nbsp;<span style="background:#dcfce7;color:#16a34a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">Verified Partner ✓</span></td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b;font-weight:600;">Address</td>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;font-weight:600;">{hospital_address}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b;font-weight:600;">Contact</td>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;font-weight:600;">{hospital_contact}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b;font-weight:600;">Patient</td>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;font-weight:600;">{sos_request.patient_name}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b;font-weight:600;">Units Required</td>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;font-weight:600;">{sos_request.units_required}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;font-size:13px;color:#64748b;font-weight:600;">Reference ID</td>
+                <td style="padding:10px 0;font-size:13px;color:#1e293b;font-weight:600;">SOS-{notification.id}</td>
+              </tr>
+            </table>
 
-❌ DECLINE - Click here to decline:
-{decline_link}
+            <p style="margin:0 0 24px;font-size:13px;color:#64748b;line-height:1.6;">You may call the hospital directly using the contact above to verify this request before responding.</p>
 
-Note: Hospital staff will verify your eligibility before donation.
+            <!-- CTA Buttons -->
+            <p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">Please respond</p>
+            <table cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+              <tr>
+                <td style="padding-right:12px;">
+                  <a href="{accept_link}" style="display:inline-block;background:#16a34a;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:8px;">&#10003;&nbsp; Yes, I can donate</a>
+                </td>
+                <td>
+                  <a href="{decline_link}" style="display:inline-block;background:#f1f5f9;color:#64748b;font-size:14px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:8px;border:1px solid #e2e8f0;">&#10005;&nbsp; Not available</a>
+                </td>
+              </tr>
+            </table>
 
-Thank you for being a life saver!
+            <!-- What happens next -->
+            <div style="background:#f8fafc;border-left:3px solid #dc2626;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.1em;">What happens next</p>
+              <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">If you accept, please visit the hospital within a few hours. Hospital staff will conduct a brief health screening before donation, following standard safety protocols. Hospital staff will verify your eligibility before donation.</p>
+            </div>
 
-- SOS Radar Emergency Blood Network
-  (This is an automated alert. Please do not reply to this email.)
-                    """
+            <!-- Sign-off -->
+            <p style="margin:0 0 6px;font-size:13px;color:#475569;line-height:1.6;">One donation can help save up to 3 lives. Thank you for being part of this network of verified NGOs and hospitals working together to save lives.</p>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#94a3b8;">SOS Radar Emergency Blood Network &mdash; This is an automated message. Please do not reply to this email.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+"""
 
                     success, info = send_email_brevo(
                         to_email=donor.email,
                         to_name=donor.name,
                         subject=subject,
-                        html_content=message.replace("\n", "<br>")
+                        html_content=html_content
                     )
                     if success:
                         notification.status = "Sent"
