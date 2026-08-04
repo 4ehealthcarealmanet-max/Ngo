@@ -339,14 +339,24 @@ class SOSRequestSerializer(serializers.ModelSerializer):
             return None
 
 class NotificationSerializer(serializers.ModelSerializer):
-    # In lines se donor ka naam aur phone number bhi API mein dikhne lagega
     donor_name = serializers.ReadOnlyField(source='donor.name')
-    #donor_phone = serializers.ReadOnlyField(source='donor.phone')
     hospital_name = serializers.ReadOnlyField(source='sos_request.hospital_name')
+    distance_km = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
         fields = '__all__'
+
+    def get_distance_km(self, obj):
+        from .utils import calculate_distance_km
+        donor = obj.donor
+        hospital_name = obj.sos_request.hospital_name if obj.sos_request else None
+        if not donor or not donor.lat or not donor.lng or not hospital_name:
+            return 0.0
+        hospital = Hospital.objects.filter(name__iexact=hospital_name).only('lat', 'lng').first()
+        if not hospital or not hospital.lat or not hospital.lng:
+            return 0.0
+        return calculate_distance_km(donor.lat, donor.lng, hospital.lat, hospital.lng)
 
 class BloodMatchSerializer(serializers.ModelSerializer):
     class Meta:
